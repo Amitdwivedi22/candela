@@ -150,23 +150,24 @@ export async function POST(req: Request) {
         "X-Content-Type-Options": "nosniff",
       },
     });
-  } catch (error: any) {
-    if (error.name === "AbortError" || error.name === "TimeoutError") {
+  } catch (error: unknown) {
+    const err = error as Error & { status?: number };
+    if (err.name === "AbortError" || err.name === "TimeoutError") {
       return new Response(
         JSON.stringify({ error: "Chat timed out. Please try again." }),
         { status: 504, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    let message = error instanceof Error ? error.message : "Internal Server Error";
-    if (error?.status === 429 || message.includes("429") || message.includes("Quota exceeded")) {
+    let message = err instanceof Error ? err.message : "Internal Server Error";
+    if (err?.status === 429 || message.includes("429") || message.includes("Quota exceeded")) {
       message = "Gemini API quota exceeded. Please try again later.";
     }
 
     console.error("Chat API error:", error);
     return new Response(
       JSON.stringify({ error: message }),
-      { status: error?.status || 500, headers: { "Content-Type": "application/json" } }
+      { status: err?.status || 500, headers: { "Content-Type": "application/json" } }
     );
   }
 }

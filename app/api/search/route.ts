@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
       .lean()
       .maxTimeMS(2000); // Prevent long-running queries from blocking the DB
 
-    const results = suggestions.map((s: any) => s.text);
+    const results = suggestions.map((s: { text: string }) => s.text);
 
     return NextResponse.json(
       { suggestions: results },

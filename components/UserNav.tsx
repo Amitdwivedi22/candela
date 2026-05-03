@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function UserNav() {
   const { data: session } = useSession();
@@ -32,7 +33,7 @@ export default function UserNav() {
         className="w-10 h-10 rounded-full bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center text-white font-semibold shadow-lg hover:shadow-violet-500/25 transition-all focus:outline-none focus:ring-2 focus:ring-violet-500/50"
       >
         {user.image ? (
-          <img src={user.image} alt={user.name || "Avatar"} className="w-full h-full rounded-full object-cover" />
+          <Image src={user.image} alt={user.name || "Avatar"} width={40} height={40} className="w-full h-full rounded-full object-cover" />
         ) : (
           initials
         )}

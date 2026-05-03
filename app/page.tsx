@@ -64,19 +64,19 @@ export default function HomePage() {
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <section className="flex-1 flex flex-col justify-center px-6 md:px-12 lg:px-20 pt-28 pb-20 max-w-5xl mx-auto w-full">
         <p className="text-white/50 text-sm mb-8 tracking-wide">
-          For 16 to 22 year olds who want to build software in a market that's stopped hiring juniors.
+          For 16 to 22 year olds who want to build software in a market that&apos;s stopped hiring juniors.
         </p>
 
         <h1
           className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold leading-[1.05] mb-10"
           style={{ fontFamily: "var(--font-playfair), Georgia, serif" }}
         >
-          Your degree won't get you hired.{" "}
+          Your degree won&apos;t get you hired.{" "}
           <span className="text-[#3b82f6] italic">What you build will.</span>
         </h1>
 
         <p className="text-white/60 text-lg md:text-xl max-w-2xl leading-relaxed mb-12">
-          Candela turns what you're studying into projects a hiring manager can open and use.
+          Candela turns what you&apos;re studying into projects a hiring manager can open and use.
           In this market, the students getting hired are the ones walking in with work to show.
           Everyone else keeps sending applications.
         </p>

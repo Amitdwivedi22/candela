@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+
 import { signOut } from "next-auth/react";
 import BriefForm, { BriefFormData } from "@/components/BriefForm";
 import { BriefDisplay } from "@/components/BriefDisplay";
@@ -87,7 +87,7 @@ export default function DashboardClient({
   initialBriefs: SavedBrief[];
   user: User;
 }) {
-  const router = useRouter();
+
 
   // ── Navigation state ──────────────────────────────────────────────────────
   const [tab, setTab] = useState<Tab>("generate");

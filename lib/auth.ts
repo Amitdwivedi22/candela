@@ -76,7 +76,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             user = await User.create({
               name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
               email: firebaseUser.email.toLowerCase(),
-              image: firebaseUser.photoUrl,
+              image: firebaseUser.photoUrl || undefined,
               provider: "google",
             });
           }
@@ -103,9 +103,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const existingUser = await User.findOne({ email });
           if (!existingUser) {
             await User.create({
-              name: user.name,
+              name: user.name || email.split("@")[0],
               email: email,
-              image: user.image,
+              image: user.image || undefined,
               provider: "google",
             });
           }

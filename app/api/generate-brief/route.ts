@@ -10,7 +10,8 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    let { course, week, projects, language, pushback, difficulty } = body;
+    let { course, week, pushback, difficulty } = body;
+    const { projects, language } = body;
 
     const stripHtml = (str: string) => str.replace(/<[^>]*>?/gm, "");
 
@@ -105,16 +106,17 @@ export async function POST(req: Request) {
           return await model.generateContentStream(fullPrompt, {
             signal: AbortSignal.timeout(30000),
           });
-        } catch (error: any) {
-          if (error.name === "AbortError" || error.name === "TimeoutError") {
-            throw error;
+        } catch (error: unknown) {
+          const err = error as Error & { status?: number };
+          if (err.name === "AbortError" || err.name === "TimeoutError") {
+            throw err;
           }
           const is429 =
-            error?.status === 429 ||
-            error?.message?.includes("429") ||
-            error?.message?.includes("Quota exceeded");
+            err?.status === 429 ||
+            err?.message?.includes("429") ||
+            err?.message?.includes("Quota exceeded");
           
-          if (!is429 || attempt === 2) throw error;
+          if (!is429 || attempt === 2) throw err;
           await new Promise((resolve) => setTimeout(resolve, delay));
           delay *= 2;
         }
@@ -147,25 +149,26 @@ export async function POST(req: Request) {
         "X-Content-Type-Options": "nosniff",
       },
     });
-  } catch (error: any) {
-    if (error.name === "AbortError" || error.name === "TimeoutError") {
+  } catch (error: unknown) {
+    const err = error as Error & { status?: number };
+    if (err.name === "AbortError" || err.name === "TimeoutError") {
       return new Response(
         JSON.stringify({ error: "Generation timed out. Please try again." }),
         { status: 504, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    let message = error instanceof Error ? error.message : "Internal Server Error";
+    let message = err instanceof Error ? err.message : "Internal Server Error";
 
     // Handle specific Google API 429 Quota errors
-    if (error?.status === 429 || message.includes("429") || message.includes("Quota exceeded")) {
+    if (err?.status === 429 || message.includes("429") || message.includes("Quota exceeded")) {
       message = "You have exceeded your Gemini API free tier quota or the model is unavailable. Please check your Google AI Studio billing details or try again later.";
     }
 
     console.error("Error generating project brief:", error);
     return new Response(
       JSON.stringify({ error: message }),
-      { status: error?.status || 500, headers: { "Content-Type": "application/json" } }
+      { status: err?.status || 500, headers: { "Content-Type": "application/json" } }
     );
   }
 }
