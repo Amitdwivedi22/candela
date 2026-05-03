@@ -1,101 +1,284 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+
+import BriefForm, { BriefFormData } from "../../components/BriefForm";
+import { BriefDisplay } from "../../components/BriefDisplay";
+import { PushbackInput } from "../../components/PushbackInput";
+import { Toaster } from "../../components/Toaster";
+import { parseBrief } from "../../lib/parseBrief";
+import { useToast } from "../lib/use-toast";
+import type { BriefSection, FormInput } from "../../types";
+
+// ── View transition variants ──────────────────────────────────────────────────
+const pageVariants = {
+  initial: { opacity: 0, y: 24 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.45, ease: "easeOut" as const } },
+  exit:    { opacity: 0, y: -16, transition: { duration: 0.3, ease: "easeIn" as const } },
+};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Map BriefForm's local BriefFormData (field: courseName) to the global
+ * FormInput shape (field: course) that the API route and buildPrompt expect.
+ */
+function toFormInput(data: BriefFormData): FormInput {
+  return {
+    course:     data.courseName,
+    week:       data.week,
+    difficulty: data.difficulty,
+    projects:   data.projects,
+    language:   data.language,
+  };
+}
+
+/**
+ * Reads a streaming Response body, appending decoded chunks to state via
+ * `onChunk`, then returns the full accumulated text.
+ */
+async function readStream(
+  response: Response,
+  onChunk: (text: string) => void
+): Promise<string> {
+  if (!response.body) throw new Error("Response has no body");
+
+  const reader  = response.body.getReader();
+  const decoder = new TextDecoder();
+  let   full    = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const chunk = decoder.decode(value, { stream: true });
+    full += chunk;
+    onChunk(full);  // pass accumulated text so cursor always renders correctly
+  }
+
+  return full;
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  // ── State ──────────────────────────────────────────────────────────────────
+  const [view,          setView]          = useState<"form" | "brief">("form");
+  const [formInput,     setFormInput]     = useState<FormInput | null>(null);
+  const [brief,         setBrief]         = useState<BriefSection | null>(null);
+  const [streamingText, setStreamingText] = useState<string>("");
+  const [isStreaming,   setIsStreaming]   = useState<boolean>(false);
+  const [isRefining,    setIsRefining]    = useState<boolean>(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+  const { toasts, toast, dismiss } = useToast();
+
+  // ── handleGenerate ─────────────────────────────────────────────────────────
+  const handleGenerate = useCallback(async (data: BriefFormData) => {
+    const input = toFormInput(data);
+
+    setFormInput(input);
+    setBrief(null);
+    setStreamingText("");
+    setIsStreaming(true);
+    setView("brief");
+
+    try {
+      const response = await fetch("/api/generate-brief", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          course:     input.course,
+          week:       input.week,
+          difficulty: input.difficulty,
+          projects:   input.projects,
+          language:   input.language,
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: "Request failed" }));
+        throw new Error(err.error ?? "Request failed");
+      }
+
+      const fullText = await readStream(response, setStreamingText);
+      setBrief(parseBrief(fullText));
+    } catch (err) {
+      console.error("Generation error:", err);
+      toast({ title: "Something went wrong. Try again.", variant: "destructive" });
+      setBrief({ problem: `Error: ${(err as Error).message}`, scaffold: "", checkpoints: [], stretch: "" });
+    } finally {
+      setIsStreaming(false);
+    }
+  }, [toast]);
+
+  // ── handlePushback ─────────────────────────────────────────────────────────
+  const handlePushback = useCallback(async (pushbackText: string) => {
+    if (!formInput) return;
+
+    setBrief(null);
+    setStreamingText("");
+    setIsRefining(true);
+    setIsStreaming(true);
+
+    try {
+      const response = await fetch("/api/generate-brief", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          course:     formInput.course,
+          week:       formInput.week,
+          difficulty: formInput.difficulty,
+          projects:   formInput.projects,
+          language:   formInput.language,
+          pushback:   pushbackText,
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: "Request failed" }));
+        throw new Error(err.error ?? "Request failed");
+      }
+
+      const fullText = await readStream(response, setStreamingText);
+      setBrief(parseBrief(fullText));
+    } catch (err) {
+      console.error("Pushback error:", err);
+      toast({ title: "Something went wrong. Try again.", variant: "destructive" });
+      setBrief({ problem: `Error: ${(err as Error).message}`, scaffold: "", checkpoints: [], stretch: "" });
+    } finally {
+      setIsStreaming(false);
+      setIsRefining(false);
+    }
+  }, [formInput, toast]);
+
+  // ── handleReset ────────────────────────────────────────────────────────────
+  const handleReset = useCallback(() => {
+    setView("form");
+    setFormInput(null);
+    setBrief(null);
+    setStreamingText("");
+    setIsStreaming(false);
+    setIsRefining(false);
+  }, []);
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  return (
+    <main className="relative min-h-screen overflow-hidden flex flex-col">
+
+      {/* Animated background orbs */}
+      <div className="fixed inset-0 z-0 pointer-events-none" aria-hidden="true">
+        <div
+          className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-violet-600 opacity-15 blur-[120px] animate-pulse"
+          style={{ animationDuration: "8s" }}
+        />
+        <div
+          className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-600 opacity-15 blur-[120px] animate-pulse"
+          style={{ animationDuration: "10s" }}
+        />
+      </div>
+
+      {/* Page content */}
+      <div className="relative z-10 flex-1 flex flex-col max-w-4xl mx-auto w-full px-6 py-12 sm:py-20">
+        <AnimatePresence mode="wait">
+
+          {/* ── FORM VIEW ── */}
+          {view === "form" && (
+            <motion.div
+              key="form"
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="flex flex-col items-center w-full"
+            >
+              {/* Hero */}
+              <div className="text-center mb-12 flex flex-col items-center">
+                <div className="relative mb-6">
+                  <div
+                    className="absolute -inset-0.5 rounded-full blur bg-gradient-to-r from-violet-600 to-indigo-600 opacity-75 animate-pulse"
+                    style={{ animationDuration: "3s" }}
+                  />
+                  <div className="relative px-4 py-1.5 bg-[#13131A] rounded-full text-xs font-medium text-white/80 border border-white/10 uppercase tracking-wider">
+                    AI-Powered · Personalized · Actionable
+                  </div>
+                </div>
+
+                <h1 className="text-4xl sm:text-6xl font-bold tracking-tight text-white mb-6">
+                  Build something{" "}
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-indigo-400">
+                    real
+                  </span>{" "}
+                  tonight.
+                </h1>
+                <p className="text-lg sm:text-xl text-white/70 max-w-2xl font-normal">
+                  Tell us where you are. Get a project brief that fits.
+                </p>
+              </div>
+
+              {/* Form */}
+              <div className="w-full max-w-2xl">
+                <BriefForm onSubmit={handleGenerate} />
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── BRIEF VIEW ── */}
+          {view === "brief" && (
+            <motion.div
+              key="brief"
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="flex flex-col w-full"
+            >
+              {/* Back button */}
+              <button
+                id="back-to-form-btn"
+                onClick={handleReset}
+                className="self-start mb-8 flex items-center gap-1.5 text-white/60 hover:text-white transition-colors text-sm font-medium group"
+                aria-label="Start a new brief"
+              >
+                <span className="group-hover:-translate-x-0.5 transition-transform">←</span>
+                New Brief
+              </button>
+
+              {/* Brief display */}
+              <BriefDisplay
+                brief={brief ?? { problem: "", scaffold: "", checkpoints: [], stretch: "" }}
+                isStreaming={isStreaming}
+                streamingText={streamingText}
+                courseName={formInput?.course}
+                weekNumber={formInput?.week}
+                onToast={(msg, variant) => toast({ title: msg, variant })}
+                formInput={formInput ?? undefined}
+              />
+
+              {/* Pushback — only shown once generation is complete */}
+              <AnimatePresence>
+                {brief && !isStreaming && (
+                  <motion.div
+                    key="pushback"
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0, transition: { delay: 0.3, duration: 0.4 } }}
+                    exit={{ opacity: 0, y: 8, transition: { duration: 0.2 } }}
+                    className="mt-8"
+                  >
+                    <PushbackInput
+                      onPushback={handlePushback}
+                      isRefining={isRefining}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+
+        </AnimatePresence>
+      </div>
+
+      {/* Toast notifications */}
+      <Toaster toasts={toasts} onDismiss={dismiss} />
+    </main>
   );
 }

@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Candela 📋
+
+> AI-powered project brief generator for students.
+
+## What it does
+
+Candela takes a student's course name, current week, prior projects, preferred language, and desired difficulty, and generates a tailored four-section project brief (Problem, Starter Scaffold, Checkpoint Questions, Stretch Goal) in real-time using the Gemini API. 
+
+The brief is streamed directly to the dashboard, providing immediate feedback. If a student wants something harder, easier, or slightly different, they can use the built-in conversational "pushback" feature to refine the brief interactively.
+
+## Features
+
+- **Dynamic Brief Generation:** Real-time generation of custom coding assignments via Gemini 2.5 Flash.
+- **Interactive Refinement (Pushback):** Conversational chat interface to refine the generated brief.
+- **Authentication & Persistence:** Secure login with Credentials and Google OAuth (via NextAuth). All generated briefs and conversations are saved in MongoDB.
+- **Dashboard:** Manage past briefs, update their status (Saved, In Progress, Completed, Abandoned), and revisit previous project ideas.
+- **PDF Export:** One-click download of your project brief as a beautifully formatted PDF.
+- **Modern UI:** Built with Tailwind CSS, framer-motion, and a cohesive dark-mode design system.
+
+## Tech Stack
+
+- **Framework:** Next.js 14 (App Router)
+- **Styling:** Tailwind CSS & Framer Motion
+- **Database:** MongoDB & Mongoose
+- **Authentication:** NextAuth (Auth.js)
+- **AI Model:** Google Gemini API (`gemini-2.5-flash`)
+- **Exporting:** jsPDF for PDF generation
 
 ## Getting Started
 
-First, run the development server:
+To get a local copy up and running, follow these simple steps.
 
+### 1. Clone the repository
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/your-username/candela.git
+cd candela
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Install dependencies
+Ensure you have Node.js installed, then run:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+This project relies on several key dependencies:
+- **`next`**: React framework for production
+- **`next-auth`**: Authentication for Next.js applications
+- **`mongoose`**: MongoDB object modeling tool
+- **`@google/generative-ai`**: Google Gemini API SDK
+- **`framer-motion`**: Animation library for React
+- **`jspdf`**: PDF document generation
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 3. Setup Environment Variables
+Create a `.env` file in the root directory and add your API keys:
+```env
+GEMINI_API_KEY="your_google_gemini_api_key"
+AUTH_SECRET="your_nextauth_secret"
+MONGODB_URI="your_mongodb_connection_string"
+GOOGLE_CLIENT_ID="optional_google_client_id"
+GOOGLE_CLIENT_SECRET="optional_google_client_secret"
+```
 
-## Learn More
+### 4. Start the development server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 
-To learn more about Next.js, take a look at the following resources:
+## Project Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```text
+candela/
+├── app/
+│   ├── (auth)/             # Authentication routes (login, signup)
+│   ├── api/                # Next.js API Routes
+│   │   ├── auth/           # NextAuth integration
+│   │   ├── briefs/         # Brief creation and management endpoints
+│   │   └── generate-brief/ # Gemini AI generation endpoint
+│   ├── dashboard/          # User dashboard for brief management
+│   ├── layout.tsx          # Root layout and global providers
+│   └── page.tsx            # Landing page
+├── components/             # Reusable UI Components
+│   ├── BriefDisplay.tsx    # Renders the brief, handles PDF export and streams
+│   ├── BriefForm.tsx       # Captures constraints (course, week, difficulty)
+│   └── PushbackInput.tsx   # Chat interface for brief refinement
+├── lib/                    # Utility functions and configurations
+│   ├── auth.ts             # NextAuth configuration
+│   └── mongodb.ts          # MongoDB connection handler
+├── models/                 # Mongoose Database Schemas
+│   ├── Brief.ts            # Project brief schema
+│   └── User.ts             # User schema
+└── public/                 # Static assets
+```
