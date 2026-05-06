@@ -63,10 +63,12 @@ export default function SignupPage() {
   };
 
   const handleGoogleSignIn = async () => {
+    setError("");
+
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const idToken = await result.user.getIdToken();
-      
+
       const res = await signIn("firebase", {
         idToken,
         redirect: false,
@@ -80,6 +82,16 @@ export default function SignupPage() {
       }
     } catch (err) {
       console.error("Google sign-in error:", err);
+      if (err instanceof Error && "code" in err && typeof err.code === "string") {
+        setError(`Google sign-in failed: ${err.code}`);
+        return;
+      }
+
+      if (err instanceof Error) {
+        setError(err.message);
+        return;
+      }
+
       setError("Failed to sign in with Google.");
     }
   };

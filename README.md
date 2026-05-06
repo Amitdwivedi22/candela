@@ -4,7 +4,7 @@
 
 ## What it does
 
-Candela takes a student's course name, current week, prior projects, preferred language, and desired difficulty, and generates a tailored four-section project brief (Problem, Starter Scaffold, Checkpoint Questions, Stretch Goal) in real-time using the Gemini API. 
+Candela takes a student's course name, current week, prior projects, preferred language, and desired difficulty, and generates a tailored four-section project brief (Problem, Starter Scaffold, Checkpoint Questions, Stretch Goal) in real-time using the Ollama API.
 
 The brief is streamed directly to the dashboard, providing immediate feedback. If a student wants something harder, easier, or slightly different, they can use the built-in conversational "pushback" feature to refine the brief interactively.
 
@@ -23,7 +23,7 @@ The brief is streamed directly to the dashboard, providing immediate feedback. I
 - **Styling:** Tailwind CSS & Framer Motion
 - **Database:** MongoDB & Mongoose
 - **Authentication:** NextAuth (Auth.js)
-- **AI Model:** Google Gemini API (`gemini-2.5-flash`)
+- **AI Model:** Ollama API
 - **Exporting:** jsPDF for PDF generation
 
 ## Getting Started
@@ -46,14 +46,16 @@ This project relies on several key dependencies:
 - **`next`**: React framework for production
 - **`next-auth`**: Authentication for Next.js applications
 - **`mongoose`**: MongoDB object modeling tool
-- **`@google/generative-ai`**: Google Gemini API SDK
+- **Ollama API**: Used for project brief generation and contextual chat
 - **`framer-motion`**: Animation library for React
 - **`jspdf`**: PDF document generation
 
 ### 3. Setup Environment Variables
 Create a `.env` file in the root directory and add your API keys:
 ```env
-GEMINI_API_KEY="your_google_gemini_api_key"
+OLLAMA_BASE_URL="https://ollama.com/api"
+OLLAMA_MODEL="gpt-oss:120b"
+OLLAMA_API_KEY="your_ollama_api_key"
 AUTH_SECRET="your_nextauth_secret"
 MONGODB_URI="your_mongodb_connection_string"
 GOOGLE_CLIENT_ID="optional_google_client_id"

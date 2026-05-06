@@ -1,11 +1,16 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { BriefSection, FormInput } from "../../../types";
+import { ollamaChat } from "@/lib/ollama";
 
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error("GEMINI_API_KEY is missing from environment variables.");
+function streamText(text: string) {
+  const encoder = new TextEncoder();
+
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(encoder.encode(text));
+      controller.close();
+    },
+  });
 }
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -100,50 +105,27 @@ export async function POST(req: Request) {
       );
     }
 
-    // ── Build Gemini chat history ────────────────────────────────────────────
-    // Gemini's chat API expects { role: "user"|"model", parts: [{text}] }.
-    // We prepend the system prompt as the first user turn so it's always in context.
     const systemPrompt = buildSystemPrompt(briefContext, formInput);
 
-    // Convert our chat history to Gemini format (all except the latest user msg)
-    const historyTurns = messages.slice(0, -1).map((msg) => ({
-      role: msg.role === "assistant" ? "model" : "user",
-      parts: [{ text: stripHtml(msg.content) }],
+    const historyTurns = messages.map((msg) => ({
+      role: msg.role,
+      content: stripHtml(msg.content),
     }));
 
-    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
-
-    // Start a chat session with the system prompt prepended into history
-    const chat = model.startChat({
-      history: [
-        // System prompt injected as an initial user→model exchange
-        { role: "user",  parts: [{ text: systemPrompt }] },
-        { role: "model", parts: [{ text: "Understood. I'm ready to help the student with their project brief." }] },
+    const text = await ollamaChat(
+      [
+        { role: "user", content: systemPrompt },
+        {
+          role: "assistant",
+          content: "Understood. I'm ready to help the student with their project brief.",
+        },
         ...historyTurns,
       ],
-    });
-
-    const result = await chat.sendMessageStream(
-      stripHtml(lastMessage.content.trim()),
-      { signal: AbortSignal.timeout(30_000) }
+      AbortSignal.timeout(30_000)
     );
 
     // ── Stream back ──────────────────────────────────────────────────────────
-    const readableStream = new ReadableStream({
-      async start(controller) {
-        const encoder = new TextEncoder();
-        try {
-          for await (const chunk of result.stream) {
-            const text = chunk.text();
-            if (text) controller.enqueue(encoder.encode(text));
-          }
-        } finally {
-          controller.close();
-        }
-      },
-    });
-
-    return new Response(readableStream, {
+    return new Response(streamText(text), {
       headers: {
         "Content-Type":         "text/plain; charset=utf-8",
         "Cache-Control":        "no-cache",
@@ -161,7 +143,7 @@ export async function POST(req: Request) {
 
     let message = err instanceof Error ? err.message : "Internal Server Error";
     if (err?.status === 429 || message.includes("429") || message.includes("Quota exceeded")) {
-      message = "Gemini API quota exceeded. Please try again later.";
+      message = "Ollama rate limit exceeded. Please try again later.";
     }
 
     console.error("Chat API error:", error);

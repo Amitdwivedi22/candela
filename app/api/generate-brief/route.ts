@@ -1,11 +1,40 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { buildPrompt } from "../../../lib/buildPrompt";
+import { ollamaGenerate } from "@/lib/ollama";
 
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error("GEMINI_API_KEY is missing from environment variables.");
+const GENERATION_TIMEOUT_MS = 60000;
+const MAX_RETRIES = 2;
+
+function isAbortLikeError(error: unknown) {
+  return (
+    error instanceof Error &&
+    (error.name === "AbortError" ||
+      error.name === "TimeoutError" ||
+      error.message.toLowerCase().includes("aborted"))
+  );
 }
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+function buildRequestSignal(req: Request) {
+  const timeoutSignal = AbortSignal.timeout(GENERATION_TIMEOUT_MS);
+
+  if (typeof AbortSignal.any === "function") {
+    return AbortSignal.any([req.signal, timeoutSignal]);
+  }
+
+  return timeoutSignal;
+}
+
+function streamText(text: string) {
+  const encoder = new TextEncoder();
+
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(encoder.encode(text));
+      controller.close();
+    },
+  });
+}
+
+export const maxDuration = 90;
 
 export async function POST(req: Request) {
   try {
@@ -96,27 +125,38 @@ export async function POST(req: Request) {
       pushback || undefined
     );
 
-    // Use gemini-2.5-flash which has a stable API and high free tier quota
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
     const fetchWithRetry = async () => {
       let delay = 1000;
-      for (let attempt = 0; attempt <= 2; attempt++) {
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
-          return await model.generateContentStream(fullPrompt, {
-            signal: AbortSignal.timeout(30000),
-          });
+          return await ollamaGenerate(fullPrompt, buildRequestSignal(req));
         } catch (error: unknown) {
           const err = error as Error & { status?: number };
-          if (err.name === "AbortError" || err.name === "TimeoutError") {
+          const wasClientAbort = req.signal.aborted;
+          const isAbort = isAbortLikeError(err);
+
+          if (wasClientAbort) {
             throw err;
           }
+
+          if (isAbort && attempt < MAX_RETRIES) {
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            delay *= 2;
+            continue;
+          }
+
+          if (isAbort) {
+            throw new Error(
+              `Generation timed out after ${GENERATION_TIMEOUT_MS / 1000} seconds. Please try again.`
+            );
+          }
+
           const is429 =
             err?.status === 429 ||
             err?.message?.includes("429") ||
             err?.message?.includes("Quota exceeded");
-          
-          if (!is429 || attempt === 2) throw err;
+
+          if (!is429 || attempt === MAX_RETRIES) throw err;
           await new Promise((resolve) => setTimeout(resolve, delay));
           delay *= 2;
         }
@@ -124,25 +164,9 @@ export async function POST(req: Request) {
       throw new Error("Failed after retries");
     };
 
-    const result = await fetchWithRetry();
+    const text = await fetchWithRetry();
 
-    const readableStream = new ReadableStream({
-      async start(controller) {
-        const encoder = new TextEncoder();
-        try {
-          for await (const chunk of result.stream) {
-            const text = chunk.text();
-            if (text) {
-              controller.enqueue(encoder.encode(text));
-            }
-          }
-        } finally {
-          controller.close();
-        }
-      },
-    });
-
-    return new Response(readableStream, {
+    return new Response(streamText(text), {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
         "Cache-Control": "no-cache",
@@ -151,7 +175,11 @@ export async function POST(req: Request) {
     });
   } catch (error: unknown) {
     const err = error as Error & { status?: number };
-    if (err.name === "AbortError" || err.name === "TimeoutError") {
+    if (req.signal.aborted) {
+      return new Response(null, { status: 499 });
+    }
+
+    if (isAbortLikeError(err) || err.message.includes("timed out")) {
       return new Response(
         JSON.stringify({ error: "Generation timed out. Please try again." }),
         { status: 504, headers: { "Content-Type": "application/json" } }
@@ -160,9 +188,8 @@ export async function POST(req: Request) {
 
     let message = err instanceof Error ? err.message : "Internal Server Error";
 
-    // Handle specific Google API 429 Quota errors
     if (err?.status === 429 || message.includes("429") || message.includes("Quota exceeded")) {
-      message = "You have exceeded your Gemini API free tier quota or the model is unavailable. Please check your Google AI Studio billing details or try again later.";
+      message = "Ollama rate limit exceeded. Please try again later.";
     }
 
     console.error("Error generating project brief:", error);

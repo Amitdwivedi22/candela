@@ -1,21 +1,40 @@
-import { initializeApp } from "firebase/app";
+import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyACtZBGMbTwt6qOCv2bC0EKZdCYenlHg14",
-  authDomain: "candela-9032b.firebaseapp.com",
-  projectId: "candela-9032b",
-  storageBucket: "candela-9032b.firebasestorage.app",
-  messagingSenderId: "908419781941",
-  appId: "1:908419781941:web:f79cbecc7be18643ce687c",
-  measurementId: "G-TPZB8PW0RN"
+const requiredFirebaseEnvVars = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = initializeApp(firebaseConfig);
+const missingFirebaseEnvVars = Object.entries(requiredFirebaseEnvVars)
+  .filter(([, value]) => !value)
+  .map(([key]) => key);
+
+if (missingFirebaseEnvVars.length > 0) {
+  console.error(
+    `Missing Firebase env vars: ${missingFirebaseEnvVars.join(", ")}`
+  );
+}
+
+const firebaseConfig = {
+  apiKey: requiredFirebaseEnvVars.apiKey ?? "",
+  authDomain: requiredFirebaseEnvVars.authDomain ?? "",
+  projectId: requiredFirebaseEnvVars.projectId ?? "",
+  storageBucket: requiredFirebaseEnvVars.storageBucket ?? "",
+  messagingSenderId: requiredFirebaseEnvVars.messagingSenderId ?? "",
+  appId: requiredFirebaseEnvVars.appId ?? "",
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+};
+
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
-  prompt: 'select_account'
+  prompt: "select_account",
 });
 
 export { app, auth, googleProvider };

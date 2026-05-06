@@ -5,6 +5,8 @@ import connectToDatabase from "./mongodb";
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
 
+const firebaseApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: "/login",
@@ -57,24 +59,33 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.idToken) return null;
+        if (!firebaseApiKey) {
+          console.error("Firebase auth error: NEXT_PUBLIC_FIREBASE_API_KEY is missing");
+          return null;
+        }
+
         try {
-          const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=AIzaSyACtZBGMbTwt6qOCv2bC0EKZdCYenlHg14`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken: credentials.idToken as string })
-          });
+          const res = await fetch(
+            `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${firebaseApiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ idToken: credentials.idToken as string }),
+            }
+          );
           const data = await res.json();
           if (data.error || !data.users || data.users.length === 0) {
+            console.error("Firebase auth lookup failed:", data.error ?? "No users returned");
             return null;
           }
-          
+
           const firebaseUser = data.users[0];
           await connectToDatabase();
-          
+
           let user = await User.findOne({ email: firebaseUser.email.toLowerCase() });
           if (!user) {
             user = await User.create({
-              name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+              name: firebaseUser.displayName || firebaseUser.email.split("@")[0],
               email: firebaseUser.email.toLowerCase(),
               image: firebaseUser.photoUrl || undefined,
               provider: "google",
@@ -89,7 +100,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           console.error("Firebase auth error:", error);
           return null;
         }
-      }
+      },
     }),
   ],
   callbacks: {

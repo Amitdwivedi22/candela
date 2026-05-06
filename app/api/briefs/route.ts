@@ -35,6 +35,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
     }
 
+    if (
+      typeof brief.problem !== "string" ||
+      typeof brief.scaffold !== "string" ||
+      !Array.isArray(brief.checkpoints) ||
+      typeof brief.stretch !== "string"
+    ) {
+      return NextResponse.json({ message: "Invalid brief payload" }, { status: 400 });
+    }
+
     await connectToDatabase();
     const newBrief = await Brief.create({
       userId: session.user.id,
@@ -43,7 +52,9 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(newBrief, { status: 201 });
-  } catch {
-    return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
+  } catch (error) {
+    console.error("Failed to create brief:", error);
+    const message = error instanceof Error ? error.message : "Internal Server Error";
+    return NextResponse.json({ message }, { status: 500 });
   }
 }
