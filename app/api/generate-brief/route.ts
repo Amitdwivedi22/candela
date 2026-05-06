@@ -1,5 +1,5 @@
 import { buildPrompt } from "../../../lib/buildPrompt";
-import { ollamaGenerate } from "@/lib/ollama";
+import { ollamaGenerateWithOptions } from "@/lib/ollama";
 
 const GENERATION_TIMEOUT_MS = 60000;
 const MAX_RETRIES = 2;
@@ -125,11 +125,28 @@ export async function POST(req: Request) {
       pushback || undefined
     );
 
+    // Ollama model recommendations:
+    // - Best quality: llama3.1:8b (ollama pull llama3.1:8b)
+    // - Fastest: mistral:7b (ollama pull mistral:7b)
+    // - Best code output: codellama:13b (ollama pull codellama:13b)
+    const systemPrompt =
+      "You are a senior software engineer writing project briefs for students. Be specific, technical, and concise. Never be vague.";
+
     const fetchWithRetry = async () => {
       let delay = 1000;
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
-          return await ollamaGenerate(fullPrompt, buildRequestSignal(req));
+          return await ollamaGenerateWithOptions(
+            {
+              prompt: fullPrompt,
+              system: systemPrompt,
+              temperature: 0.4,
+              top_p: 0.9,
+              repeat_penalty: 1.1,
+              num_predict: 1200,
+            },
+            buildRequestSignal(req)
+          );
         } catch (error: unknown) {
           const err = error as Error & { status?: number };
           const wasClientAbort = req.signal.aborted;

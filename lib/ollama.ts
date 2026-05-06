@@ -44,6 +44,14 @@ async function parseError(response: Response) {
   }
 }
 
+export type OllamaGenerateOptions = {
+  system?: string;
+  temperature?: number;
+  top_p?: number;
+  repeat_penalty?: number;
+  num_predict?: number;
+};
+
 export async function ollamaGenerate(prompt: string, signal: AbortSignal) {
   const response = await fetch(`${ollamaBaseUrl}/generate`, {
     method: "POST",
@@ -53,6 +61,45 @@ export async function ollamaGenerate(prompt: string, signal: AbortSignal) {
       model: ollamaModel,
       prompt,
       stream: false,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseError(response));
+  }
+
+  const payload = (await response.json()) as OllamaGenerateResponse;
+  if (!payload.response) {
+    throw new Error(payload.error || "Ollama returned an empty response.");
+  }
+
+  return payload.response;
+}
+
+/**
+ * Ollama /generate with explicit decoding settings and a separate system string.
+ * Note: Ollama's local API uses these fields; if your Ollama version differs,
+ * adjust accordingly.
+ */
+export async function ollamaGenerateWithOptions(
+  params: { prompt: string } & OllamaGenerateOptions,
+  signal: AbortSignal
+) {
+  const { prompt, system, temperature, top_p, repeat_penalty, num_predict } = params;
+
+  const response = await fetch(`${ollamaBaseUrl}/generate`, {
+    method: "POST",
+    headers: getOllamaHeaders(),
+    signal,
+    body: JSON.stringify({
+      model: ollamaModel,
+      prompt,
+      stream: false,
+      ...(system ? { system } : {}),
+      ...(temperature !== undefined ? { temperature } : {}),
+      ...(top_p !== undefined ? { top_p } : {}),
+      ...(repeat_penalty !== undefined ? { repeat_penalty } : {}),
+      ...(num_predict !== undefined ? { num_predict } : {}),
     }),
   });
 
@@ -94,4 +141,3 @@ export async function ollamaChat(
 
   return payload.message.content;
 }
-

@@ -6,16 +6,35 @@ import User from "@/models/User";
 import bcrypt from "bcryptjs";
 
 const firebaseApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+const googleEnabled = Boolean(googleClientId && googleClientSecret);
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  debug: process.env.NODE_ENV === "development" && process.env.AUTH_DEBUG === "true",
+  // NextAuth expects NEXTAUTH_SECRET. Your README uses AUTH_SECRET, so we support both.
+  secret: process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET,
   pages: {
     signIn: "/login",
   },
+  events: {
+    async signIn({ user, account }) {
+      console.log("[next-auth] signIn", {
+        provider: account?.provider,
+        email: user?.email,
+      });
+    },
+  },
   providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    }),
+    ...(googleEnabled
+      ? [
+          Google({
+            clientId: googleClientId as string,
+            clientSecret: googleClientSecret as string,
+          }),
+        ]
+      : []),
     Credentials({
       name: "Credentials",
       credentials: {
@@ -73,9 +92,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               body: JSON.stringify({ idToken: credentials.idToken as string }),
             }
           );
-          const data = await res.json();
+
+          const data: { error?: unknown; users?: Array<any> } = await res.json();
+
           if (data.error || !data.users || data.users.length === 0) {
-            console.error("Firebase auth lookup failed:", data.error ?? "No users returned");
+            console.error(
+              "Firebase auth lookup failed:",
+              (data.error as unknown) ?? "No users returned"
+            );
             return null;
           }
 
@@ -83,6 +107,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           await connectToDatabase();
 
           let user = await User.findOne({ email: firebaseUser.email.toLowerCase() });
+
           if (!user) {
             user = await User.create({
               name: firebaseUser.displayName || firebaseUser.email.split("@")[0],
@@ -91,6 +116,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               provider: "google",
             });
           }
+
           return {
             id: user._id.toString(),
             email: user.email,
@@ -110,12 +136,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         try {
           const email = user.email?.toLowerCase();
           if (!email) return false;
-          
+
           const existingUser = await User.findOne({ email });
           if (!existingUser) {
             await User.create({
               name: user.name || email.split("@")[0],
-              email: email,
+              email,
               image: user.image || undefined,
               provider: "google",
             });

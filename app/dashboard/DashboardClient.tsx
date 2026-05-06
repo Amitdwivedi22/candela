@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { signOut } from "next-auth/react";
 import BriefForm, { BriefFormData } from "@/components/BriefForm";
@@ -10,6 +11,7 @@ import { BriefDisplay } from "@/components/BriefDisplay";
 import { PushbackInput } from "@/components/PushbackInput";
 import { ChatPanel } from "@/components/ChatPanel";
 import { parseBrief } from "@/lib/parseBrief";
+import { useAuthGuard } from "@/lib/useAuthGuard";
 import type { BriefSection, FormInput } from "@/types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -87,7 +89,9 @@ export default function DashboardClient({
   initialBriefs: SavedBrief[];
   user: User;
 }) {
+  const router = useRouter();
 
+  const { loading: authLoading, user: firebaseUser } = useAuthGuard();
 
   // ── Navigation state ──────────────────────────────────────────────────────
   const [tab, setTab] = useState<Tab>("generate");
@@ -268,6 +272,38 @@ export default function DashboardClient({
   });
 
   const firstName = user.name?.split(" ")[0] || "there";
+
+  // ── Auth guard (client-side, based on Firebase onAuthStateChanged) ───────
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0A] text-white flex flex-col">
+        <header className="border-b border-white/[0.07] px-6 md:px-10 py-4 bg-[#0A0A0A]/90 backdrop-blur-md sticky top-0 z-40">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/[0.08]" />
+            <div className="h-4 w-40 rounded bg-white/[0.03] border border-white/[0.08]" />
+          </div>
+        </header>
+        <main className="flex-1 px-6 md:px-10 py-10 max-w-5xl mx-auto w-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-white/[0.02] border border-white/[0.07] rounded-2xl p-6">
+                <div className="h-4 w-2/3 rounded bg-white/[0.04] border border-white/[0.08]" />
+                <div className="mt-4 h-3 w-full rounded bg-white/[0.04] border border-white/[0.08]" />
+                <div className="mt-2 h-3 w-5/6 rounded bg-white/[0.04] border border-white/[0.08]" />
+                <div className="mt-8 h-7 w-2/3 rounded-xl bg-white/[0.03] border border-white/[0.08]" />
+              </div>
+            ))}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!firebaseUser) {
+    // Replace so back button doesn't return to the dashboard.
+    router.replace("/login");
+    return null;
+  }
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (

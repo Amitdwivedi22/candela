@@ -31,7 +31,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const updatedBrief = await Brief.findOneAndUpdate(
       { _id: params.id, userId: session.user.id },
       updateQuery,
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (!updatedBrief) {
