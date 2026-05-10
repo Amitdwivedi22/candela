@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { auth, googleProvider } from "@/lib/firebase";
+import { signInWithPopup } from "firebase/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -51,14 +53,30 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const res = await signIn("google", { redirect: false, callbackUrl: "/dashboard" });
+      const result = await signInWithPopup(auth, googleProvider);
+      const idToken = await result.user.getIdToken();
+
+      const res = await signIn("firebase", {
+        idToken,
+        redirect: false,
+      });
+
       if (res?.error) {
         setError("Error signing in with Google. Please try again.");
+      } else {
+        router.replace("/dashboard");
+        router.refresh();
+      }
+    } catch (err) {
+      console.error("Google sign-in error:", err);
+      if (err instanceof Error && "code" in err && typeof err.code === "string") {
+        setError(`Google sign-in failed: ${err.code}`);
         return;
       }
-      router.replace("/dashboard");
-      router.refresh();
-    } catch {
+      if (err instanceof Error) {
+        setError(err.message);
+        return;
+      }
       setError("Failed to sign in with Google.");
     } finally {
       setLoading(false);
