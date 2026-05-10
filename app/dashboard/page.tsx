@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import Brief from "@/models/Brief";
+import User from "@/models/User";
 import DashboardClient from "./DashboardClient";
 
 export default async function DashboardPage() {
@@ -11,7 +12,16 @@ export default async function DashboardPage() {
   }
 
   await connectToDatabase();
-  const briefs = await Brief.find({ userId: session.user.id })
+
+  // Redirect based on chosen domain
+  const user = await User.findById(session.user.id);
+  if (!user?.domain) {
+    redirect("/dashboard/select-domain");
+  } else if (user.domain !== "tech") {
+    redirect(`/dashboard/${user.domain}`);
+  }
+
+  const briefs = await Brief.find({ userId: session.user.id, domain: { $in: ["tech", null] } })
     .sort({ createdAt: -1 })
     .lean();
 

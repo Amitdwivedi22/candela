@@ -16,7 +16,7 @@
 import { FormInput } from "../types";
 
 export function buildPrompt(input: FormInput, pushback?: string): string {
-  const { course, week, projects, language, difficulty = 3 } = input;
+  const { course, week, projects, language, difficulty = 3, syllabus } = input;
 
   const formattedProjects = projects
     .map((p, i) => `${i + 1}. ${p}`)
@@ -59,6 +59,15 @@ export function buildPrompt(input: FormInput, pushback?: string): string {
       : "- (none provided by user)",
     `- Preferred programming language: ${language}`,
   ].join("\n");
+
+  const syllabusSection = syllabus
+    ? [
+        "Course Syllabus / Topics provided by the student:",
+        `"${syllabus.trim()}"`,
+        "",
+        "CRITICAL: Align the problem, scaffold, and difficulty EXACTLY with the provided syllabus context for the current week.",
+      ].join("\n")
+    : "";
 
   const pushbackSection = pushback
     ? [
@@ -114,6 +123,8 @@ export function buildPrompt(input: FormInput, pushback?: string): string {
     sectionFormatConstraint,
     "",
     studentProfileSection,
+    "",
+    syllabusSection,
     "",
     instructionNumberedList,
     "",

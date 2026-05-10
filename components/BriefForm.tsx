@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Upload, FileText } from "lucide-react";
 import { detectLanguage } from "../lib/detectLanguage";
 import { COURSE_SUGGESTIONS } from "../lib/courseSuggestions";
 
@@ -12,6 +12,7 @@ export interface BriefFormData {
   difficulty: number;
   projects: string[];
   language: string;
+  syllabus?: string;
 }
 
 const DIFFICULTY_LEVELS: { label: string; value: number }[] = [
@@ -34,11 +35,48 @@ export default function BriefForm({
   const [difficulty, setDifficulty] = useState(3);
   const [projects, setProjects] = useState<string[]>([""]);
   const [language, setLanguage] = useState("");
-  const [errors, setErrors] = useState<{ courseName?: string; projects?: string; language?: string }>({});
+  const [syllabus, setSyllabus] = useState("");
+  const [errors, setErrors] = useState<{ courseName?: string; projects?: string; language?: string; syllabus?: string }>({});
   const [suggestedLanguage, setSuggestedLanguage] = useState<string | null>(null);
   const [practiceCount, setPracticeCount] = useState<number | "">("");
   const [courseSuggestions, setCourseSuggestions] = useState<string[]>([]);
   const [isCourseFocused, setIsCourseFocused] = useState(false);
+  const [isParsingFile, setIsParsingFile] = useState(false);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsParsingFile(true);
+    setErrors(prev => ({ ...prev, syllabus: undefined }));
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/parse-pdf", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || "Failed to parse file");
+      }
+
+      const data = await response.json();
+      if (data.text) {
+        setSyllabus(prev => prev ? prev + "\n\n" + data.text : data.text);
+      }
+    } catch (error) {
+      console.error(error);
+      setErrors(prev => ({ ...prev, syllabus: "Failed to read file. Please paste text instead." }));
+    } finally {
+      setIsParsingFile(false);
+      // Reset input
+      e.target.value = '';
+    }
+  };
 
   const handleAddProject = () => {
     if (projects.length < 4) {
@@ -63,7 +101,7 @@ export default function BriefForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const newErrors: { courseName?: string; projects?: string; language?: string } = {};
+    const newErrors: { courseName?: string; projects?: string; language?: string; syllabus?: string } = {};
     if (!courseName.trim()) newErrors.courseName = "Course Name is required.";
     
     const validProjects = projects.filter(p => p.trim() !== "");
@@ -88,13 +126,14 @@ export default function BriefForm({
       difficulty,
       projects: validProjects,
       language,
+      syllabus: syllabus.trim() ? syllabus.trim() : undefined,
     };
 
     onSubmit(formData);
   };
 
   return (
-    <form suppressHydrationWarning onSubmit={handleSubmit} className="w-full bg-[#13131A] border border-white/10 rounded-2xl p-6 sm:p-10 shadow-2xl flex flex-col gap-8">
+    <form suppressHydrationWarning onSubmit={handleSubmit} className="w-full bg-[#13131A] border border-white/10 rounded-2xl p-5 sm:p-8 shadow-2xl flex flex-col gap-6 sm:gap-8">
       
       {/* Course Name */}
       <div className="flex flex-col gap-3 relative z-50">
@@ -170,6 +209,53 @@ export default function BriefForm({
         {errors.courseName && <span className="text-red-500 text-sm">{errors.courseName}</span>}
       </div>
 
+      {/* Course Syllabus */}
+      <div className="flex flex-col gap-3">
+        <div className="flex justify-between items-end mb-1">
+          <label htmlFor="syllabus" className="text-white font-medium">
+            Course Syllabus (Optional)
+          </label>
+          <div className="relative">
+            <input
+              type="file"
+              id="syllabus-file"
+              accept=".pdf,.txt,.md"
+              className="hidden"
+              onChange={handleFileUpload}
+              disabled={isParsingFile}
+            />
+            <label
+              htmlFor="syllabus-file"
+              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
+                isParsingFile
+                  ? "bg-white/5 border-white/10 text-white/40 cursor-not-allowed"
+                  : "bg-white/[0.04] border-white/10 text-white/70 hover:bg-white/[0.08] hover:text-white"
+              }`}
+            >
+              {isParsingFile ? (
+                <svg className="animate-spin w-3.5 h-3.5 text-white/40" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 22 6.477 22 12h-4z"/>
+                </svg>
+              ) : (
+                <Upload className="w-3.5 h-3.5" />
+              )}
+              {isParsingFile ? "Extracting..." : "Upload File (PDF/TXT)"}
+            </label>
+          </div>
+        </div>
+        <textarea
+          id="syllabus"
+          placeholder="Paste course syllabus or relevant topics here for more accurate brief generation..."
+          value={syllabus}
+          onChange={(e) => setSyllabus(e.target.value)}
+          rows={4}
+          className="w-full bg-[#13131A] border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder:text-white/30 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-shadow resize-none"
+        />
+        {errors.syllabus && <span className="text-red-500 text-sm mt-1">{errors.syllabus}</span>}
+        <span className="text-white/40 text-xs">This helps generate a brief closely matched to your actual curriculum. Paste text or upload a document.</span>
+      </div>
+
       {/* Course Week */}
       <div className="space-y-3">
         <div className="flex justify-between items-center">
@@ -203,13 +289,13 @@ export default function BriefForm({
             {DIFFICULTY_LEVELS[difficulty - 1].label}
           </span>
         </div>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-5 gap-1 sm:gap-2">
           {DIFFICULTY_LEVELS.map(({ label, value }) => (
             <button
               key={value}
               type="button"
               onClick={() => setDifficulty(value)}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border ${
+              className={`py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 border ${
                 difficulty === value
                   ? "bg-violet-600 border-violet-500 text-white shadow-[0_0_16px_rgba(124,58,237,0.4)]"
                   : "bg-transparent border-white/10 text-white/50 hover:border-violet-500/50 hover:text-white/80"
@@ -269,7 +355,7 @@ export default function BriefForm({
             ))}
           </AnimatePresence>
           
-          <div className="flex items-center justify-between gap-3 bg-[#1A1A24] p-4 rounded-xl border border-white/5 mt-1">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#1A1A24] p-4 rounded-xl border border-white/5 mt-1">
             <div className="flex-1">
               <label className="text-sm text-white/90 font-medium block mb-1">Practice Problems</label>
               <span className="text-xs text-white/50">Approximate number of exercises completed</span>
@@ -283,7 +369,7 @@ export default function BriefForm({
                 if (errors.projects) setErrors(prev => ({ ...prev, projects: undefined }));
               }}
               placeholder="e.g. 20"
-              className="w-24 bg-[#13131A] border border-white/10 rounded-lg px-3 py-2 text-white placeholder:text-white/30 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-shadow text-center"
+              className="w-full sm:w-24 bg-[#13131A] border border-white/10 rounded-lg px-3 py-2.5 sm:py-2 text-white placeholder:text-white/30 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-shadow sm:text-center"
             />
           </div>
           {errors.projects && <span className="text-red-500 text-sm">{errors.projects}</span>}

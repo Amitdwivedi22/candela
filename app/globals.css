@@ -100,3 +100,19 @@ select option {
 .text-blue-accent {
   color: #3b82f6;
 }
+
+/* ─── Scrollbar none (for filter chip rows) ─────────────────────────────── */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─── Mobile safe-area insets (notch / home bar) ────────────────────────── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

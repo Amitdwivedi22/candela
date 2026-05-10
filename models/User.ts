@@ -6,6 +6,7 @@ export interface IUser extends Document {
   password?: string;
   provider: string;
   image?: string;
+  domain?: 'tech' | 'commerce' | 'engineering' | 'medical';
   createdAt: Date;
 }
 
@@ -31,6 +32,11 @@ const UserSchema: Schema<IUser> = new Schema(
     },
     image: {
       type: String,
+    },
+    domain: {
+      type: String,
+      enum: ['tech', 'commerce', 'engineering', 'medical'],
+      default: 'tech',
     },
     createdAt: {
       type: Date,

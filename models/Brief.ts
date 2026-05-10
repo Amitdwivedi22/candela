@@ -18,6 +18,8 @@ export interface IFormInput {
   week: string;
   projects: string[];
   language?: string;
+  syllabus?: string;
+  domain?: string;
 }
 
 export interface IBrief extends Document {
@@ -26,6 +28,7 @@ export interface IBrief extends Document {
   brief: IBriefSection;
   refinements: IRefinement[];
   status: 'saved' | 'in_progress' | 'completed' | 'abandoned';
+  domain: 'tech' | 'commerce' | 'engineering' | 'medical';
   createdAt: Date;
 }
 
@@ -60,6 +63,13 @@ const BriefSchema: Schema<IBrief> = new Schema(
       week: { type: String, required: true },
       projects: [{ type: String }],
       language: { type: String },
+      syllabus: { type: String },
+      domain: { type: String },
+    },
+    domain: {
+      type: String,
+      enum: ['tech', 'commerce', 'engineering', 'medical'],
+      default: 'tech',
     },
     brief: {
       type: BriefSectionSchema,

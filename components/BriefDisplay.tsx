@@ -173,9 +173,9 @@ export function BriefDisplay({
       `}</style>
 
       {/* Top bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-4 border-b border-white/10">
         <div>
-          <h2 className="text-2xl font-bold text-white">Your Project Brief</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-white">Your Project Brief</h2>
           <p className="text-white/60 text-sm mt-1">
             {courseName} • Week {weekNumber}
           </p>
@@ -188,10 +188,10 @@ export function BriefDisplay({
               copyToClipboard(fullBriefText, setCopiedFull, "Brief copied to clipboard!")
             }
             disabled={isStreaming}
-            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-white/5 hover:bg-white/10 text-white text-xs sm:text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {copiedFull ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-            {copiedFull ? "Copied!" : "Copy Brief"}
+            {copiedFull ? <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-400" /> : <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+            {copiedFull ? "Copied!" : "Copy"}
           </button>
 
           {/* Download PDF */}
@@ -199,11 +199,11 @@ export function BriefDisplay({
             id="download-pdf-btn"
             onClick={handleDownloadPDF}
             disabled={isStreaming || pdfLoading}
-            className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors"
           >
             {pdfLoading
-              ? <Loader2 className="w-4 h-4 animate-spin" />
-              : <Download className="w-4 h-4" />}
+              ? <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
+              : <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
             {pdfLoading ? "Building…" : "Download PDF"}
           </button>
         </div>

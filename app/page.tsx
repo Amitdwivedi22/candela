@@ -22,13 +22,13 @@ function LogoMark() {
 function TopBar() {
   const { data: session } = useSession();
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-4 border-b border-white/[0.06] bg-[#0A0A0A]/80 backdrop-blur-md">
+    <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 md:px-12 py-3.5 sm:py-4 border-b border-white/[0.06] bg-[#0A0A0A]/80 backdrop-blur-md">
       <LogoMark />
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         {session ? (
           <Link
             href="/dashboard"
-            className="px-5 py-2 bg-[#3b82f6] hover:bg-blue-500 text-white text-sm font-medium rounded-full transition-colors"
+            className="px-4 sm:px-5 py-2 bg-[#3b82f6] hover:bg-blue-500 text-white text-sm font-medium rounded-full transition-colors active:scale-95"
           >
             Dashboard →
           </Link>
@@ -36,13 +36,13 @@ function TopBar() {
           <>
             <Link
               href="/login"
-              className="px-5 py-2 text-white/70 hover:text-white text-sm font-medium transition-colors"
+              className="px-3 sm:px-5 py-2 text-white/70 hover:text-white text-sm font-medium transition-colors"
             >
               Log in
             </Link>
             <Link
               href="/signup"
-              className="px-5 py-2 bg-[#3b82f6] hover:bg-blue-500 text-white text-sm font-medium rounded-full transition-colors"
+              className="px-4 sm:px-5 py-2 bg-[#3b82f6] hover:bg-blue-500 text-white text-sm font-medium rounded-full transition-colors active:scale-95"
             >
               Sign up free
             </Link>
@@ -62,38 +62,63 @@ export default function HomePage() {
       <TopBar />
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <section className="flex-1 flex flex-col justify-center px-6 md:px-12 lg:px-20 pt-28 pb-20 max-w-5xl mx-auto w-full">
-        <p className="text-white/50 text-sm mb-8 tracking-wide">
-          For 16 to 22 year olds who want to build software in a market that&apos;s stopped hiring juniors.
+      <section className="flex-1 flex flex-col justify-center px-4 sm:px-6 md:px-12 lg:px-20 pt-24 sm:pt-28 pb-12 sm:pb-16 max-w-5xl mx-auto w-full">
+        <p className="text-white/50 text-xs sm:text-sm mb-5 sm:mb-8 tracking-wide leading-relaxed uppercase">
+          For students who want to build a portfolio that actually gets them hired.
         </p>
 
         <h1
-          className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold leading-[1.05] mb-10"
+          className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold leading-[1.08] sm:leading-[1.05] mb-6 sm:mb-10"
           style={{ fontFamily: "var(--font-playfair), Georgia, serif" }}
         >
           Your degree won&apos;t get you hired.{" "}
           <span className="text-[#3b82f6] italic">What you build will.</span>
         </h1>
 
-        <p className="text-white/60 text-lg md:text-xl max-w-2xl leading-relaxed mb-12">
-          Candela turns what you&apos;re studying into projects a hiring manager can open and use.
-          In this market, the students getting hired are the ones walking in with work to show.
-          Everyone else keeps sending applications.
+        <p className="text-white/60 text-base sm:text-lg md:text-xl max-w-2xl leading-relaxed mb-8 sm:mb-12">
+          Candela turns your university syllabus into real-world projects, case studies, and engineering problems a hiring manager can actually review. Walk in with work to show, while everyone else just sends resumes.
         </p>
 
-        <div className="flex flex-wrap gap-4 items-center">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 items-stretch sm:items-center">
           <Link
             href={session ? "/dashboard" : "/signup"}
             id="hero-cta-btn"
-            className="px-8 py-3.5 bg-[#3b82f6] hover:bg-blue-500 text-white font-medium rounded-full text-[15px] transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="block sm:inline-block text-center px-8 py-4 sm:py-3.5 bg-white text-black hover:bg-gray-100 font-semibold rounded-full text-[15px] transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
-            {session ? "Go to dashboard →" : "Get started — it's free"}
+            {session ? "Go to dashboard →" : "Start building for free"}
           </Link>
         </div>
       </section>
 
+      {/* ── DOMAINS ──────────────────────────────────────────────────────── */}
+      <section className="px-4 sm:px-6 md:px-12 lg:px-20 pb-20 sm:pb-32 max-w-5xl mx-auto w-full">
+        <p className="text-white/40 text-sm mb-6 font-medium">Supported disciplines:</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-[#3b82f6]/5 border border-[#3b82f6]/20 rounded-2xl p-5 hover:bg-[#3b82f6]/10 transition-colors">
+            <div className="text-2xl mb-3">⌨️</div>
+            <h3 className="text-white font-semibold mb-1 text-[#3b82f6]">Tech & Software</h3>
+            <p className="text-white/50 text-xs leading-relaxed">Turn CS topics into full-stack projects, CLIs, and APIs.</p>
+          </div>
+          <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-5 hover:bg-emerald-500/10 transition-colors">
+            <div className="text-2xl mb-3">📊</div>
+            <h3 className="text-white font-semibold mb-1 text-emerald-400">Commerce</h3>
+            <p className="text-white/50 text-xs leading-relaxed">Generate real-world case studies and Excel financial models.</p>
+          </div>
+          <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-5 hover:bg-amber-500/10 transition-colors">
+            <div className="text-2xl mb-3">⚙️</div>
+            <h3 className="text-white font-semibold mb-1 text-amber-400">Engineering</h3>
+            <p className="text-white/50 text-xs leading-relaxed">Solve real design problems with MATLAB and Python scaffolds.</p>
+          </div>
+          <div className="bg-rose-500/5 border border-rose-500/20 rounded-2xl p-5 hover:bg-rose-500/10 transition-colors">
+            <div className="text-2xl mb-3">🩺</div>
+            <h3 className="text-white font-semibold mb-1 text-rose-400">Medical</h3>
+            <p className="text-white/50 text-xs leading-relaxed">Practice diagnostic skills with realistic clinical case presentations.</p>
+          </div>
+        </div>
+      </section>
+
       {/* ── FOOTER ───────────────────────────────────────────────────────── */}
-      <footer className="border-t border-white/[0.07] px-6 md:px-12 py-8 mt-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-white/30">
+      <footer className="border-t border-white/[0.07] px-4 sm:px-6 md:px-12 py-6 sm:py-8 mt-auto flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 text-sm text-white/30">
         <div className="flex items-center gap-2">
           <span className="font-semibold text-white/50" style={{ fontFamily: "var(--font-playfair), Georgia, serif" }}>Candela</span>
           <span>© 2026. All rights reserved.</span>

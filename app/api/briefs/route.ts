@@ -3,15 +3,18 @@ import { auth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import Brief from "@/models/Brief";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const domain = (searchParams.get("domain") as "tech" | "commerce" | "engineering" | "medical") || "tech";
+
     await connectToDatabase();
-    const briefs = await Brief.find({ userId: session.user.id })
+    const briefs = await Brief.find({ userId: session.user.id, domain })
       .sort({ createdAt: -1 })
       .lean();
 
@@ -29,7 +32,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { formInput, brief } = body;
+    const { formInput, brief, domain = "tech" } = body;
 
     if (!formInput || !brief) {
       return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
@@ -49,6 +52,7 @@ export async function POST(req: Request) {
       userId: session.user.id,
       formInput,
       brief,
+      domain,
     });
 
     return NextResponse.json(newBrief, { status: 201 });

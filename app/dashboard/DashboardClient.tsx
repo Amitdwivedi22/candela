@@ -23,6 +23,7 @@ type SavedBrief = {
     projects: string[];
     language: string;
     difficulty?: number;
+    syllabus?: string;
   };
   brief: { problem: string };
   status: "saved" | "in_progress" | "completed" | "abandoned";
@@ -39,6 +40,7 @@ function toFormInput(data: BriefFormData): FormInput {
     difficulty: data.difficulty,
     projects: data.projects,
     language: data.language,
+    syllabus: data.syllabus,
   };
 }
 
@@ -138,6 +140,7 @@ export default function DashboardClient({
           difficulty: input.difficulty,
           projects: input.projects,
           language: input.language,
+          syllabus: input.syllabus,
         }),
       });
 
@@ -155,7 +158,7 @@ export default function DashboardClient({
       fetch("/api/briefs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ formInput: input, brief: parsed }),
+        body: JSON.stringify({ domain: "tech", formInput: input, brief: parsed }),
       })
         .then((r) => r.json())
         .then((saved) => {
@@ -277,16 +280,16 @@ export default function DashboardClient({
   if (authLoading) {
     return (
       <div className="min-h-screen bg-[#0A0A0A] text-white flex flex-col">
-        <header className="border-b border-white/[0.07] px-6 md:px-10 py-4 bg-[#0A0A0A]/90 backdrop-blur-md sticky top-0 z-40">
+        <header className="border-b border-white/[0.07] px-4 sm:px-6 md:px-10 py-3.5 sm:py-4 bg-[#0A0A0A]/90 backdrop-blur-md sticky top-0 z-40">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/[0.08]" />
             <div className="h-4 w-40 rounded bg-white/[0.03] border border-white/[0.08]" />
           </div>
         </header>
-        <main className="flex-1 px-6 md:px-10 py-10 max-w-5xl mx-auto w-full">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <main className="flex-1 px-4 sm:px-6 md:px-10 py-6 sm:py-10 max-w-5xl mx-auto w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-white/[0.02] border border-white/[0.07] rounded-2xl p-6">
+              <div key={i} className="bg-white/[0.02] border border-white/[0.07] rounded-2xl p-5 sm:p-6">
                 <div className="h-4 w-2/3 rounded bg-white/[0.04] border border-white/[0.08]" />
                 <div className="mt-4 h-3 w-full rounded bg-white/[0.04] border border-white/[0.08]" />
                 <div className="mt-2 h-3 w-5/6 rounded bg-white/[0.04] border border-white/[0.08]" />
@@ -310,21 +313,22 @@ export default function DashboardClient({
     <div className="min-h-screen bg-[#0A0A0A] text-white flex flex-col">
 
       {/* ── Dashboard top bar ─────────────────────────────────────────────── */}
-      <header className="border-b border-white/[0.07] px-6 md:px-10 py-4 flex items-center justify-between bg-[#0A0A0A]/90 backdrop-blur-md sticky top-0 z-40">
-        <div className="flex items-center gap-6">
+      <header className="border-b border-white/[0.07] px-3 sm:px-6 md:px-10 py-3 sm:py-4 flex items-center justify-between bg-[#0A0A0A]/90 backdrop-blur-md sticky top-0 z-40">
+        <div className="flex items-center gap-2 sm:gap-6">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 shrink-0">
+          <Link href="/" className="flex items-center gap-2 shrink-0">
             <div className="w-6 h-6 rounded-full bg-[#3b82f6] flex items-center justify-center">
               <span className="text-white font-bold text-xs" style={{ fontFamily: "var(--font-playfair), Georgia, serif" }}>C</span>
             </div>
             <span className="text-white font-semibold text-sm tracking-wide hidden sm:block">Candela</span>
+            <span className="text-[#3b82f6] text-xs font-medium hidden sm:block">/ Tech</span>
           </Link>
 
           {/* Tab navigation */}
-          <nav className="flex items-center gap-1">
+          <nav className="flex items-center gap-0.5 sm:gap-1">
             <button
               onClick={() => setTab("generate")}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all ${
                 tab === "generate"
                   ? "bg-[#3b82f6]/15 text-[#3b82f6]"
                   : "text-white/50 hover:text-white"
@@ -334,7 +338,7 @@ export default function DashboardClient({
             </button>
             <button
               onClick={() => setTab("history")}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${
+              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all flex items-center gap-1 sm:gap-1.5 ${
                 tab === "history"
                   ? "bg-[#3b82f6]/15 text-[#3b82f6]"
                   : "text-white/50 hover:text-white"
@@ -351,7 +355,12 @@ export default function DashboardClient({
         </div>
 
         {/* User menu */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Domain switcher */}
+          <Link href="/dashboard/select-domain"
+            className="hidden sm:flex items-center gap-1 px-3 py-1.5 text-white/40 hover:text-white text-xs border border-white/[0.07] hover:border-white/20 rounded-lg transition-all">
+            ⌨️ Switch domain
+          </Link>
           <div className="hidden sm:flex items-center gap-2">
             <div className="w-7 h-7 rounded-full bg-[#3b82f6]/20 border border-[#3b82f6]/30 flex items-center justify-center text-xs font-semibold text-[#3b82f6]">
               {firstName[0].toUpperCase()}
@@ -360,7 +369,7 @@ export default function DashboardClient({
           </div>
           <button
             onClick={() => signOut({ callbackUrl: "/" })}
-            className="px-3 py-1.5 text-white/40 hover:text-white text-xs border border-white/[0.07] hover:border-white/20 rounded-lg transition-all"
+            className="px-2.5 sm:px-3 py-1.5 text-white/40 hover:text-white text-xs border border-white/[0.07] hover:border-white/20 rounded-lg transition-all"
           >
             Sign out
           </button>
@@ -368,7 +377,7 @@ export default function DashboardClient({
       </header>
 
       {/* ── Main content ──────────────────────────────────────────────────── */}
-      <main className="flex-1 px-6 md:px-10 py-10 max-w-5xl mx-auto w-full">
+      <main className="flex-1 px-3 sm:px-6 md:px-10 py-6 sm:py-10 max-w-5xl mx-auto w-full">
         <AnimatePresence mode="wait">
 
           {/* ── GENERATE TAB ─────────────────────────────────────────────── */}
@@ -384,29 +393,29 @@ export default function DashboardClient({
               {genView === "form" && (
                 <div className="w-full max-w-2xl mx-auto flex flex-col items-center text-center">
                   {/* Greeting */}
-                  <div className="mb-10 flex flex-col items-center">
+                  <div className="mb-6 sm:mb-10 flex flex-col items-center px-1">
                     <p className="text-white/40 text-sm mb-1">Welcome back, {firstName}.</p>
                     <h1
-                      className="text-4xl sm:text-5xl font-bold text-white leading-tight"
+                      className="text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight"
                       style={{ fontFamily: "var(--font-playfair), Georgia, serif" }}
                     >
                       What are you{" "}
                       <span className="text-[#3b82f6] italic">studying today?</span>
                     </h1>
-                    <p className="mt-3 text-white/45 text-base max-w-xl leading-relaxed">
+                    <p className="mt-3 text-white/45 text-sm sm:text-base max-w-xl leading-relaxed">
                       Tell Candela where you are. We&apos;ll generate a project brief one step past your
                       comfort zone — something you can walk into an interview with.
                     </p>
                   </div>
 
                   {genError && (
-                    <div className="mb-6 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm w-full text-left">
+                    <div className="mb-4 sm:mb-6 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm w-full text-left">
                       {genError}
                     </div>
                   )}
 
                   {/* BriefForm */}
-                  <div className="w-full max-w-xl text-left">
+                  <div className="w-full text-left">
                     <BriefForm onSubmit={handleGenerate} isSubmitting={isStreaming} />
                   </div>
                 </div>
@@ -418,7 +427,7 @@ export default function DashboardClient({
                   <button
                     id="back-to-form-btn"
                     onClick={handleReset}
-                    className="self-start mb-8 flex items-center gap-1.5 text-white/50 hover:text-white transition-colors text-sm font-medium group"
+                    className="self-start mb-5 sm:mb-8 flex items-center gap-1.5 text-white/50 hover:text-white transition-colors text-sm font-medium group"
                   >
                     <span className="group-hover:-translate-x-0.5 transition-transform">←</span>
                     New brief
@@ -426,18 +435,18 @@ export default function DashboardClient({
 
                   {/* Brief context summary */}
                   {formInput && (
-                    <div className="mb-6 flex flex-wrap gap-2">
-                      <span className="px-3 py-1 bg-white/[0.04] border border-white/[0.07] rounded-full text-xs text-white/60">
+                    <div className="mb-4 sm:mb-6 flex flex-wrap gap-1.5 sm:gap-2">
+                      <span className="px-2.5 sm:px-3 py-1 bg-white/[0.04] border border-white/[0.07] rounded-full text-xs text-white/60">
                         📚 {formInput.course}
                       </span>
-                      <span className="px-3 py-1 bg-white/[0.04] border border-white/[0.07] rounded-full text-xs text-white/60">
+                      <span className="px-2.5 sm:px-3 py-1 bg-white/[0.04] border border-white/[0.07] rounded-full text-xs text-white/60">
                         📅 Week {formInput.week}
                       </span>
-                      <span className="px-3 py-1 bg-white/[0.04] border border-white/[0.07] rounded-full text-xs text-white/60">
+                      <span className="px-2.5 sm:px-3 py-1 bg-white/[0.04] border border-white/[0.07] rounded-full text-xs text-white/60">
                         💻 {formInput.language}
                       </span>
                       {formInput.difficulty && (
-                        <span className="px-3 py-1 bg-[#3b82f6]/10 border border-[#3b82f6]/20 rounded-full text-xs text-[#3b82f6]">
+                        <span className="px-2.5 sm:px-3 py-1 bg-[#3b82f6]/10 border border-[#3b82f6]/20 rounded-full text-xs text-[#3b82f6]">
                           ⚡ {["", "Beginner", "Easy", "Standard", "Advanced", "Expert"][formInput.difficulty]}
                         </span>
                       )}
@@ -485,10 +494,10 @@ export default function DashboardClient({
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.3 }}
             >
-              <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                 <div>
                   <h2
-                    className="text-3xl font-bold text-white"
+                    className="text-2xl sm:text-3xl font-bold text-white"
                     style={{ fontFamily: "var(--font-playfair), Georgia, serif" }}
                   >
                     Your Briefs
@@ -501,7 +510,7 @@ export default function DashboardClient({
                 </div>
                 <button
                   onClick={() => { setTab("generate"); handleReset(); }}
-                  className="self-start sm:self-auto px-5 py-2.5 bg-[#3b82f6] hover:bg-blue-500 text-white text-sm font-medium rounded-full transition-colors"
+                  className="self-start sm:self-auto px-4 sm:px-5 py-2 sm:py-2.5 bg-[#3b82f6] hover:bg-blue-500 text-white text-sm font-medium rounded-full transition-colors active:scale-95"
                 >
                   + New brief
                 </button>
@@ -509,12 +518,12 @@ export default function DashboardClient({
 
               {/* Filter tabs */}
               {briefs.length > 0 && (
-                <div className="flex gap-2 mb-8">
+                <div className="flex gap-1.5 sm:gap-2 mb-6 sm:mb-8 overflow-x-auto pb-1 scrollbar-none">
                   {(["All", "In Progress", "Completed"] as const).map((f) => (
                     <button
                       key={f}
                       onClick={() => setHistoryFilter(f)}
-                      className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all border ${
+                      className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all border whitespace-nowrap ${
                         historyFilter === f
                           ? "bg-[#3b82f6]/15 text-[#3b82f6] border-[#3b82f6]/30"
                           : "text-white/40 border-white/[0.07] hover:text-white hover:border-white/20"
@@ -528,18 +537,18 @@ export default function DashboardClient({
 
               {briefs.length === 0 ? (
                 /* Empty state */
-                <div className="text-center py-24 border border-white/[0.07] rounded-2xl bg-white/[0.01]">
+                <div className="text-center py-16 sm:py-24 border border-white/[0.07] rounded-2xl bg-white/[0.01] px-4">
                   <div className="text-4xl mb-4">📋</div>
                   <p className="text-white/50 mb-6 text-base">No briefs generated yet.</p>
                   <button
                     onClick={() => setTab("generate")}
-                    className="inline-flex items-center px-6 py-3 bg-[#3b82f6] hover:bg-blue-500 text-white font-medium rounded-full text-sm transition-colors"
+                    className="inline-flex items-center px-6 py-3 bg-[#3b82f6] hover:bg-blue-500 text-white font-medium rounded-full text-sm transition-colors active:scale-95"
                   >
                     Generate your first brief →
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {filteredBriefs.map((b, i) => (
                     <motion.div
                       key={b._id}
