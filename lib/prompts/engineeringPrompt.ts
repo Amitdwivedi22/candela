@@ -12,12 +12,9 @@
 export interface EngineeringFormInput {
   branch: string;
   subject: string;
-  semester: number;
-  software: string;
-  problemType: string;
+  week: number;
   difficulty: number;
   priorWork: string[];
-  unitSystem: "SI" | "Imperial";
   syllabus?: string;
 }
 
@@ -25,12 +22,9 @@ export function buildEngineeringPrompt(input: EngineeringFormInput, pushback?: s
   const {
     branch,
     subject,
-    semester,
-    software,
-    problemType,
+    week,
     difficulty = 3,
     priorWork,
-    unitSystem = "SI",
     syllabus,
   } = input;
 
@@ -51,26 +45,23 @@ export function buildEngineeringPrompt(input: EngineeringFormInput, pushback?: s
     "Return EXACTLY these four sections with these exact headers:",
     "",
     "## Design Problem",
-    `[2-3 sentences. Real structural/mechanical/electrical design scenario. Specify exact dimensions, loads, materials, and constraints in ${unitSystem} units. Be specific — this must be solvable, not hypothetical.]`,
+    "[2-3 sentences. Real structural/mechanical/electrical design scenario. Specify exact dimensions, loads, materials, and constraints. Be specific — this must be solvable, not hypothetical.]",
     "",
     "## Calculation Scaffold",
-    `[Provide actual ${software} code OR step-by-step calculation template. For MATLAB/Python: write real runnable code with TODO comments. For manual problems: write the solution framework with blank formula spaces. Use ${unitSystem} units throughout. Use a fenced code block for code.]`,
+    "[Provide either real runnable code or a step-by-step calculation template, whichever best fits the problem. For code-based problems: write real runnable code with TODO comments. For manual problems: write the solution framework with blank formula spaces. Use a fenced code block when code is appropriate.]",
     "",
     "## Checkpoint Questions",
     "[3 numbered questions: (1) a fundamental analysis question (loads, forces, or circuit values), (2) a material/component selection or safety factor question, (3) an optimization or failure mode analysis question.]",
     "",
     "## Stretch Goal",
-    "[One harder extension: FEA simulation, dynamic analysis, or code optimization that uses a concept from the next semester. Name the exact software/method/standard required.]",
+    "[One harder extension: FEA simulation, dynamic analysis, or code optimization that uses a concept from a later week. Name the exact method or standard required.]",
   ].join("\n");
 
   const studentProfile = [
     "Student profile:",
     `- Branch: ${branch}`,
     `- Subject: ${subject}`,
-    `- Semester: ${semester}`,
-    `- Preferred software: ${software}`,
-    `- Problem type: ${problemType}`,
-    `- Unit system: ${unitSystem}`,
+    `- Week: ${week}`,
     `- Prior work completed:`,
     formattedPriorWork,
   ].join("\n");
@@ -88,11 +79,11 @@ export function buildEngineeringPrompt(input: EngineeringFormInput, pushback?: s
     `Generate an engineering project brief for a ${branch} student.`,
     "",
     "Follow these rules:",
-    `1. Use concepts from Semester ${semester} of ${subject} specifically.`,
+    `1. Use concepts from Week ${week} of ${subject} specifically.`,
     "2. Make all dimensions, loads, and material properties specific and realistic.",
-    `3. Use ${unitSystem} units consistently throughout.`,
+    "3. Use a consistent unit system throughout the entire brief.",
     "4. Reference real engineering standards (IS 456, ASTM A36, IEC 60364, etc.) where applicable.",
-    `5. The calculation scaffold must be immediately usable in ${software}.`,
+    "5. The calculation scaffold must be immediately usable with no extra interpretation.",
     "6. Design problems must be constrained — no open-ended 'design a bridge' prompts.",
     "",
     `Difficulty level: ${difficulty}/5 — ${difficultyInstructions[difficulty]}`,

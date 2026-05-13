@@ -5,6 +5,17 @@ import connectToDatabase from "./mongodb";
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
 
+interface FirebaseLookupUser {
+  email: string;
+  displayName?: string;
+  photoUrl?: string;
+}
+
+interface FirebaseLookupResponse {
+  error?: unknown;
+  users?: FirebaseLookupUser[];
+}
+
 const firebaseApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -93,7 +104,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }
           );
 
-          const data: { error?: unknown; users?: Array<any> } = await res.json();
+          const data: FirebaseLookupResponse = await res.json();
 
           if (data.error || !data.users || data.users.length === 0) {
             console.error(

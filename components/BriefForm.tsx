@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, X, Upload, FileText } from "lucide-react";
-import { detectLanguage } from "../lib/detectLanguage";
+import { Plus, X, Upload } from "lucide-react";
 import { COURSE_SUGGESTIONS } from "../lib/courseSuggestions";
 
 export interface BriefFormData {
@@ -11,7 +10,6 @@ export interface BriefFormData {
   week: number;
   difficulty: number;
   projects: string[];
-  language: string;
   syllabus?: string;
 }
 
@@ -34,10 +32,8 @@ export default function BriefForm({
   const [week, setWeek] = useState(1);
   const [difficulty, setDifficulty] = useState(3);
   const [projects, setProjects] = useState<string[]>([""]);
-  const [language, setLanguage] = useState("");
   const [syllabus, setSyllabus] = useState("");
-  const [errors, setErrors] = useState<{ courseName?: string; projects?: string; language?: string; syllabus?: string }>({});
-  const [suggestedLanguage, setSuggestedLanguage] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ courseName?: string; projects?: string; syllabus?: string }>({});
   const [practiceCount, setPracticeCount] = useState<number | "">("");
   const [courseSuggestions, setCourseSuggestions] = useState<string[]>([]);
   const [isCourseFocused, setIsCourseFocused] = useState(false);
@@ -101,7 +97,7 @@ export default function BriefForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const newErrors: { courseName?: string; projects?: string; language?: string; syllabus?: string } = {};
+    const newErrors: { courseName?: string; projects?: string; syllabus?: string } = {};
     if (!courseName.trim()) newErrors.courseName = "Course Name is required.";
     
     const validProjects = projects.filter(p => p.trim() !== "");
@@ -111,8 +107,6 @@ export default function BriefForm({
     
     if (validProjects.length === 0) newErrors.projects = "At least one project or practice count must be provided.";
     
-    if (!language) newErrors.language = "Please select a preferred language or tool.";
-
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -125,7 +119,6 @@ export default function BriefForm({
       week,
       difficulty,
       projects: validProjects,
-      language,
       syllabus: syllabus.trim() ? syllabus.trim() : undefined,
     };
 
@@ -133,11 +126,11 @@ export default function BriefForm({
   };
 
   return (
-    <form suppressHydrationWarning onSubmit={handleSubmit} className="w-full bg-[#13131A] border border-white/10 rounded-2xl p-5 sm:p-8 shadow-2xl flex flex-col gap-6 sm:gap-8">
+    <form suppressHydrationWarning onSubmit={handleSubmit} className="studio-card w-full rounded-[1.75rem] p-5 shadow-2xl flex flex-col gap-6 sm:p-8 sm:gap-8">
       
       {/* Course Name */}
       <div className="flex flex-col gap-3 relative z-50">
-        <label htmlFor="courseName" className="text-white font-medium">
+        <label htmlFor="courseName" className="font-medium text-[var(--text-main)]">
           Course Name
         </label>
         <div className="relative">
@@ -160,17 +153,8 @@ export default function BriefForm({
               } else {
                 setCourseSuggestions([]);
               }
-              
-              const detected = detectLanguage(value);
-              if (detected && detected !== language) {
-                // Show suggestion only when it differs from the already-selected language
-                setSuggestedLanguage(detected);
-              } else {
-                // Nothing detected, or user already has this language selected
-                setSuggestedLanguage(null);
-              }
             }}
-            className={`w-full bg-[#13131A] border ${errors.courseName ? 'border-red-500' : 'border-white/10'} rounded-xl px-4 py-3.5 text-white placeholder:text-white/30 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-shadow`}
+            className={`w-full rounded-xl border ${errors.courseName ? 'border-red-500' : 'border-[var(--night-line)]'} bg-[rgba(6,12,18,0.45)] px-4 py-3.5 text-[var(--text-main)] placeholder:text-[var(--text-dim)] focus:outline-none focus:border-[var(--night-glow)] focus:ring-1 focus:ring-[var(--night-glow)] transition-shadow`}
           />
           <AnimatePresence>
             {isCourseFocused && courseSuggestions.length > 0 && (
@@ -178,7 +162,7 @@ export default function BriefForm({
                 initial={{ opacity: 0, y: -5 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -5 }}
-                className="absolute top-full left-0 right-0 mt-2 bg-[#1A1A24] border border-white/10 rounded-xl shadow-xl overflow-hidden z-50"
+                className="absolute top-full left-0 right-0 z-50 mt-2 overflow-hidden rounded-xl border border-[var(--night-line)] bg-[var(--night-panel)] shadow-xl"
               >
                 {courseSuggestions.map(suggestion => (
                   <button
@@ -189,15 +173,8 @@ export default function BriefForm({
                       setCourseSuggestions([]);
                       setIsCourseFocused(false);
                       if (errors.courseName) setErrors(prev => ({ ...prev, courseName: undefined }));
-                      
-                      const detected = detectLanguage(suggestion);
-                      if (detected && detected !== language) {
-                        setSuggestedLanguage(detected);
-                      } else {
-                        setSuggestedLanguage(null);
-                      }
                     }}
-                    className="w-full text-left px-4 py-3 text-white/80 hover:bg-violet-600/20 hover:text-white transition-colors border-b border-white/5 last:border-0"
+                    className="w-full border-b border-white/5 px-4 py-3 text-left text-[var(--text-dim)] transition-colors hover:bg-[rgba(255,122,61,0.12)] hover:text-[var(--text-main)] last:border-0"
                   >
                     {suggestion}
                   </button>
@@ -212,7 +189,7 @@ export default function BriefForm({
       {/* Course Syllabus */}
       <div className="flex flex-col gap-3">
         <div className="flex justify-between items-end mb-1">
-          <label htmlFor="syllabus" className="text-white font-medium">
+          <label htmlFor="syllabus" className="font-medium text-[var(--text-main)]">
             Course Syllabus (Optional)
           </label>
           <div className="relative">
@@ -228,8 +205,8 @@ export default function BriefForm({
               htmlFor="syllabus-file"
               className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
                 isParsingFile
-                  ? "bg-white/5 border-white/10 text-white/40 cursor-not-allowed"
-                  : "bg-white/[0.04] border-white/10 text-white/70 hover:bg-white/[0.08] hover:text-white"
+                  ? "bg-white/5 border-[var(--night-line)] text-[var(--text-dim)] cursor-not-allowed"
+                  : "bg-white/[0.04] border-[var(--night-line)] text-[var(--text-dim)] hover:bg-white/[0.08] hover:text-[var(--text-main)]"
               }`}
             >
               {isParsingFile ? (
@@ -250,42 +227,42 @@ export default function BriefForm({
           value={syllabus}
           onChange={(e) => setSyllabus(e.target.value)}
           rows={4}
-          className="w-full bg-[#13131A] border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder:text-white/30 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-shadow resize-none"
+          className="w-full resize-none rounded-xl border border-[var(--night-line)] bg-[rgba(6,12,18,0.45)] px-4 py-3.5 text-[var(--text-main)] placeholder:text-[var(--text-dim)] focus:outline-none focus:border-[var(--night-glow)] focus:ring-1 focus:ring-[var(--night-glow)] transition-shadow"
         />
         {errors.syllabus && <span className="text-red-500 text-sm mt-1">{errors.syllabus}</span>}
-        <span className="text-white/40 text-xs">This helps generate a brief closely matched to your actual curriculum. Paste text or upload a document.</span>
+        <span className="text-xs text-[var(--text-dim)]">This helps match the brief to your actual curriculum instead of guessing from the course title.</span>
       </div>
 
       {/* Course Week */}
       <div className="space-y-3">
         <div className="flex justify-between items-center">
-          <label className="text-white/70 text-sm font-medium">Course Week</label>
-          <span className="text-violet-400 font-bold text-lg">
-            Week {week} <span className="text-white/40 text-sm font-normal">of 20</span>
+          <label className="text-sm font-medium text-[var(--text-dim)]">Course Week</label>
+          <span className="text-lg font-bold text-[var(--night-glow)]">
+            Week {week} <span className="text-sm font-normal text-[var(--text-dim)]">of 52</span>
           </span>
         </div>
         <input
           type="range"
           min={1}
-          max={20}
+          max={52}
           value={week}
           onChange={(e) => setWeek(Number(e.target.value))}
           className="w-full h-2 rounded-full appearance-none cursor-pointer"
           style={{
-            background: `linear-gradient(to right, #7c3aed ${(week - 1) / 19 * 100}%, #ffffff20 ${(week - 1) / 19 * 100}%)`
+            background: `linear-gradient(to right, var(--night-glow) ${(week - 1) / 51 * 100}%, rgba(255,255,255,0.12) ${(week - 1) / 51 * 100}%)`
           }}
         />
-        <div className="flex justify-between text-white/30 text-xs">
+        <div className="flex justify-between text-xs text-[var(--text-dim)]">
           <span>Week 1</span>
-          <span>Week 20</span>
+          <span>Week 52</span>
         </div>
       </div>
 
       {/* Difficulty Dial */}
       <div className="flex flex-col gap-3">
         <div className="flex justify-between items-center">
-          <label className="text-white font-medium">Difficulty</label>
-          <span className="text-violet-400 font-bold text-sm">
+          <label className="font-medium text-[var(--text-main)]">Difficulty</label>
+          <span className="text-sm font-bold text-[var(--night-warm)]">
             {DIFFICULTY_LEVELS[difficulty - 1].label}
           </span>
         </div>
@@ -297,8 +274,8 @@ export default function BriefForm({
               onClick={() => setDifficulty(value)}
               className={`py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 border ${
                 difficulty === value
-                  ? "bg-violet-600 border-violet-500 text-white shadow-[0_0_16px_rgba(124,58,237,0.4)]"
-                  : "bg-transparent border-white/10 text-white/50 hover:border-violet-500/50 hover:text-white/80"
+                  ? "border-[rgba(255,184,108,0.28)] bg-[rgba(255,184,108,0.16)] text-[var(--text-main)] shadow-[0_0_16px_rgba(255,184,108,0.18)]"
+                  : "bg-transparent border-[var(--night-line)] text-[var(--text-dim)] hover:border-[rgba(255,184,108,0.28)] hover:text-[var(--text-main)]"
               }`}
             >
               {label}
@@ -310,12 +287,12 @@ export default function BriefForm({
       {/* Prior Experience */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <label className="text-white font-medium">Prior Experience (Projects & Practice)</label>
+          <label className="font-medium text-[var(--text-main)]">Prior Experience (Projects & Practice)</label>
           {projects.length < 4 && (
             <button
               type="button"
               onClick={handleAddProject}
-              className="flex items-center gap-1.5 text-sm text-violet-400 hover:text-violet-300 transition-colors font-medium"
+              className="flex items-center gap-1.5 text-sm font-medium text-[var(--night-glow)] transition-colors hover:opacity-80"
             >
               <Plus className="w-4 h-4" />
               Add project
@@ -340,13 +317,13 @@ export default function BriefForm({
                   placeholder="e.g. Built a calculator in Python"
                   value={project}
                   onChange={(e) => handleProjectChange(index, e.target.value)}
-                  className={`w-full bg-[#13131A] border ${errors.projects ? 'border-red-500' : 'border-white/10'} rounded-xl px-4 py-3.5 text-white placeholder:text-white/30 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-shadow pr-12`}
+                  className={`w-full rounded-xl border ${errors.projects ? 'border-red-500' : 'border-[var(--night-line)]'} bg-[rgba(6,12,18,0.45)] px-4 py-3.5 pr-12 text-[var(--text-main)] placeholder:text-[var(--text-dim)] focus:outline-none focus:border-[var(--night-glow)] focus:ring-1 focus:ring-[var(--night-glow)] transition-shadow`}
                 />
                 {projects.length > 1 && (
                   <button
                     type="button"
                     onClick={() => handleRemoveProject(index)}
-                    className="absolute right-4 text-white/30 hover:text-white/70 transition-colors"
+                    className="absolute right-4 text-[var(--text-dim)] transition-colors hover:text-[var(--text-main)]"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -355,10 +332,10 @@ export default function BriefForm({
             ))}
           </AnimatePresence>
           
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#1A1A24] p-4 rounded-xl border border-white/5 mt-1">
+          <div className="mt-1 flex flex-col justify-between gap-3 rounded-xl border border-[var(--night-line)] bg-[rgba(255,255,255,0.03)] p-4 sm:flex-row sm:items-center">
             <div className="flex-1">
-              <label className="text-sm text-white/90 font-medium block mb-1">Practice Problems</label>
-              <span className="text-xs text-white/50">Approximate number of exercises completed</span>
+              <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Practice Problems</label>
+              <span className="text-xs text-[var(--text-dim)]">Approximate number of exercises completed</span>
             </div>
             <input
               type="number"
@@ -369,84 +346,11 @@ export default function BriefForm({
                 if (errors.projects) setErrors(prev => ({ ...prev, projects: undefined }));
               }}
               placeholder="e.g. 20"
-              className="w-full sm:w-24 bg-[#13131A] border border-white/10 rounded-lg px-3 py-2.5 sm:py-2 text-white placeholder:text-white/30 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-shadow sm:text-center"
+              className="w-full rounded-lg border border-[var(--night-line)] bg-[rgba(6,12,18,0.45)] px-3 py-2.5 text-[var(--text-main)] placeholder:text-[var(--text-dim)] focus:outline-none focus:border-[var(--night-glow)] focus:ring-1 focus:ring-[var(--night-glow)] transition-shadow sm:w-24 sm:py-2 sm:text-center"
             />
           </div>
           {errors.projects && <span className="text-red-500 text-sm">{errors.projects}</span>}
         </div>
-      </div>
-
-      {/* Preferred Language / Tool */}
-      <div className="flex flex-col gap-3">
-        <label className="text-white font-medium">Preferred Language / Tool</label>
-        <div className="relative">
-          <select
-            suppressHydrationWarning
-            value={language}
-            onChange={(e) => {
-              const value = e.target.value;
-              setLanguage(value);
-              if (errors.language) setErrors(prev => ({ ...prev, language: undefined }));
-              if (suggestedLanguage === value) {
-                setSuggestedLanguage(null);
-              }
-            }}
-            className={`w-full bg-[#13131A] border ${errors.language ? 'border-red-500' : 'border-white/10'} text-white rounded-xl px-4 py-3 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 appearance-none cursor-pointer`}
-          >
-            <option value="" disabled>Select a language or tool</option>
-            <option value="Python">Python</option>
-            <option value="JavaScript">JavaScript</option>
-            <option value="TypeScript">TypeScript</option>
-            <option value="Java">Java</option>
-            <option value="C++">C++</option>
-            <option value="Go">Go</option>
-            <option value="Rust">Rust</option>
-            <option disabled>──────────</option>
-            <option value="MATLAB">MATLAB</option>
-            <option value="Excel/Spreadsheets">Excel / Spreadsheets</option>
-            <option value="None (Theory/Math)">None (Theory/Math)</option>
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center">
-            <svg className="w-4 h-4 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-        </div>
-        <AnimatePresence>
-          {suggestedLanguage && (
-            <motion.div
-              initial={{ opacity: 0, y: -5, height: 0 }}
-              animate={{ opacity: 1, y: 0, height: "auto" }}
-              exit={{ opacity: 0, height: 0, marginTop: 0 }}
-              className="flex items-center gap-3 bg-violet-500/10 border border-violet-500/20 rounded-lg px-4 py-3"
-            >
-              <span className="text-sm text-violet-200">
-                We suggest <strong>{suggestedLanguage}</strong> for this course — use it?
-              </span>
-              <div className="flex items-center gap-2 ml-auto">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLanguage(suggestedLanguage);
-                    setSuggestedLanguage(null);
-                    if (errors.language) setErrors(prev => ({ ...prev, language: undefined }));
-                  }}
-                  className="text-xs font-medium bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 rounded-md transition-colors"
-                >
-                  Accept
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSuggestedLanguage(null)}
-                  className="text-xs font-medium bg-white/5 hover:bg-white/10 text-white/70 px-3 py-1.5 rounded-md transition-colors"
-                >
-                  Dismiss
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        {errors.language && <span className="text-red-500 text-sm">{errors.language}</span>}
       </div>
 
       {/* Submit Button */}
@@ -454,7 +358,7 @@ export default function BriefForm({
         type="submit"
         disabled={isSubmitting}
         aria-live="polite"
-        className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl transition-all duration-200"
+        className="w-full rounded-xl bg-[var(--night-glow)] py-4 font-semibold text-[#0d1720] transition-all duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isSubmitting ? (
           <span className="flex items-center justify-center gap-2">

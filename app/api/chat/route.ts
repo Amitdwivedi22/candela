@@ -1,5 +1,5 @@
-import type { BriefSection, FormInput } from "../../../types";
-import { ollamaChat } from "@/lib/ollama";
+import type { BriefSection, FormInput } from "@/types";
+import { groqChat } from "@/lib/groq";
 
 function streamText(text: string) {
   const encoder = new TextEncoder();
@@ -42,7 +42,7 @@ Keep answers short: 2–5 sentences unless code is needed. Use markdown code blo
 ── STUDENT PROFILE ──────────────────────────────────────────
 Course:   ${input.course}
 Week:     ${input.week}
-Language: ${input.language}
+Language: ${input.language || "Python"}
 Difficulty level: ${input.difficulty ?? 3}/5
 
 ── PROJECT BRIEF ────────────────────────────────────────────
@@ -112,16 +112,15 @@ export async function POST(req: Request) {
       content: stripHtml(msg.content),
     }));
 
-    const text = await ollamaChat(
-      [
-        { role: "user", content: systemPrompt },
-        {
-          role: "assistant",
-          content: "Understood. I'm ready to help the student with their project brief.",
-        },
-        ...historyTurns,
-      ],
-      AbortSignal.timeout(30_000)
+    const timeoutSignal = AbortSignal.timeout(30_000);
+    const signal =
+      typeof AbortSignal.any === "function"
+        ? AbortSignal.any([req.signal, timeoutSignal])
+        : timeoutSignal;
+
+    const text = await groqChat(
+      [{ role: "system", content: systemPrompt }, ...historyTurns],
+      signal
     );
 
     // ── Stream back ──────────────────────────────────────────────────────────
@@ -134,6 +133,10 @@ export async function POST(req: Request) {
     });
   } catch (error: unknown) {
     const err = error as Error & { status?: number };
+    if (req.signal.aborted) {
+      return new Response(null, { status: 499 });
+    }
+
     if (err.name === "AbortError" || err.name === "TimeoutError") {
       return new Response(
         JSON.stringify({ error: "Chat timed out. Please try again." }),
@@ -143,7 +146,7 @@ export async function POST(req: Request) {
 
     let message = err instanceof Error ? err.message : "Internal Server Error";
     if (err?.status === 429 || message.includes("429") || message.includes("Quota exceeded")) {
-      message = "Ollama rate limit exceeded. Please try again later.";
+      message = "Groq rate limit exceeded. Please try again later.";
     }
 
     console.error("Chat API error:", error);

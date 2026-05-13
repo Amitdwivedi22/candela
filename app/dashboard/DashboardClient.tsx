@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { CSSProperties, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,7 +10,6 @@ import BriefForm, { BriefFormData } from "@/components/BriefForm";
 import { BriefDisplay } from "@/components/BriefDisplay";
 import { PushbackInput } from "@/components/PushbackInput";
 import { ChatPanel } from "@/components/ChatPanel";
-import { parseBrief } from "@/lib/parseBrief";
 import { useAuthGuard } from "@/lib/useAuthGuard";
 import type { BriefSection, FormInput } from "@/types";
 
@@ -21,7 +20,7 @@ type SavedBrief = {
     course: string;
     week: string | number;
     projects: string[];
-    language: string;
+    language?: string;
     difficulty?: number;
     syllabus?: string;
   };
@@ -39,31 +38,48 @@ function toFormInput(data: BriefFormData): FormInput {
     week: data.week,
     difficulty: data.difficulty,
     projects: data.projects,
-    language: data.language,
     syllabus: data.syllabus,
   };
 }
 
-async function readStream(
-  response: Response,
-  onChunk: (text: string) => void
-): Promise<string> {
-  if (!response.body) throw new Error("Response has no body");
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let full = "";
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
-      full += chunk;
-      onChunk(full);
-    }
-  } catch (err) {
-    if ((err as Error).name !== "AbortError") throw err;
+function formatBriefForPrompt(brief: BriefSection): string {
+  return [
+    "## The Problem",
+    brief.problem,
+    "",
+    "## Starter Scaffold",
+    `\`\`\`python\n${brief.scaffold}\n\`\`\``,
+    "",
+    "## Checkpoint Questions",
+    brief.checkpoints.map((checkpoint, index) => `Q${index + 1}: ${checkpoint}`).join("\n"),
+    "",
+    "## Stretch Goal",
+    brief.stretch,
+  ].join("\n");
+}
+
+class ApiClientError extends Error {
+  status?: number;
+
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = "ApiClientError";
+    this.status = status;
   }
-  return full;
+}
+
+async function readApiError(response: Response) {
+  const payload = await response
+    .json()
+    .catch(() => ({ error: "Request failed" }));
+
+  return new ApiClientError(payload.error ?? "Request failed", response.status);
+}
+
+function isRateLimitError(error: unknown) {
+  const err = error as ApiClientError | Error;
+  const status = "status" in (err ?? {}) ? (err as ApiClientError).status : undefined;
+  return status === 429 || err.message.toLowerCase().includes("rate limit");
 }
 
 // ── Status badge colours ──────────────────────────────────────────────────────
@@ -82,6 +98,16 @@ const STATUS_LABELS: Record<string, string> = {
 
 // ── Tab type ──────────────────────────────────────────────────────────────────
 type Tab = "generate" | "history";
+
+const sheryThemeVars: CSSProperties = {
+  "--night-glow": "#ff7a3d",
+  "--night-warm": "#ffb36b",
+  "--night-line": "rgba(255, 122, 61, 0.18)",
+  "--night-panel": "#121212",
+  "--night-panel-soft": "rgba(18, 18, 18, 0.88)",
+  "--text-main": "#f7efe8",
+  "--text-dim": "rgba(247, 239, 232, 0.64)",
+} as CSSProperties;
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function DashboardClient({
@@ -115,7 +141,7 @@ export default function DashboardClient({
   const [historyFilter, setHistoryFilter] = useState<"All" | "In Progress" | "Completed">("All");
 
   // ── handleGenerate ─────────────────────────────────────────────────────────
-  const handleGenerate = useCallback(async (data: BriefFormData) => {
+  const handleGenerate = useCallback(async (data: BriefFormData, retryCount = 0) => {
     abortRef.current?.abort();
     abortRef.current = new AbortController();
 
@@ -139,18 +165,18 @@ export default function DashboardClient({
           week: input.week,
           difficulty: input.difficulty,
           projects: input.projects,
-          language: input.language,
           syllabus: input.syllabus,
         }),
       });
 
       if (!response.ok) {
-        const err = await response.json().catch(() => ({ error: "Request failed" }));
-        throw new Error(err.error ?? "Request failed");
+        throw await readApiError(response);
       }
 
-      const fullText = await readStream(response, setStreamingText);
-      const parsed = parseBrief(fullText);
+      const payload = (await response.json()) as { brief: BriefSection };
+      const parsed = payload.brief;
+
+      setStreamingText(formatBriefForPrompt(parsed));
       setBrief(parsed);
       setIsStreaming(false);
 
@@ -177,6 +203,15 @@ export default function DashboardClient({
       setMissingFields(missing);
     } catch (err) {
       if ((err as Error).name === "AbortError") return;
+      if (isRateLimitError(err) && retryCount < 1) {
+        setGenError(
+          "Groq is rate limited right now (free tier). Waiting 10 seconds and retrying automatically..."
+        );
+        window.setTimeout(() => {
+          void handleGenerate(data, retryCount + 1);
+        }, 10_000);
+        return;
+      }
       console.error(err);
       setGenError((err as Error).message || "Something went wrong. Try again.");
       setBrief({ problem: `Error: ${(err as Error).message}`, scaffold: "", checkpoints: [], stretch: "" });
@@ -186,11 +221,14 @@ export default function DashboardClient({
   }, []);
 
   // ── handlePushback ─────────────────────────────────────────────────────────
-  const handlePushback = useCallback(async (pushbackText: string) => {
-    if (!formInput) return;
+  const handlePushback = useCallback(async (pushbackText: string, retryCount = 0) => {
+    if (!formInput || !brief) return;
+    const previousBrief = formatBriefForPrompt(brief);
+    const currentBriefSnapshot = brief;
     setBrief(null);
     setStreamingText("");
     setMissingFields([]);
+    setGenError("");
     setIsRefining(true);
     setIsStreaming(true);
 
@@ -198,16 +236,21 @@ export default function DashboardClient({
       const response = await fetch("/api/generate-brief", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formInput, course: formInput.course, pushback: pushbackText }),
+        body: JSON.stringify({
+          ...formInput,
+          course: formInput.course,
+          pushback: pushbackText,
+          previousBrief,
+        }),
       });
 
       if (!response.ok) {
-        const err = await response.json().catch(() => ({ error: "Request failed" }));
-        throw new Error(err.error ?? "Request failed");
+        throw await readApiError(response);
       }
 
-      const fullText = await readStream(response, setStreamingText);
-      const parsed = parseBrief(fullText);
+      const payload = (await response.json()) as { brief: BriefSection };
+      const parsed = payload.brief;
+      setStreamingText(formatBriefForPrompt(parsed));
       setBrief(parsed);
 
       if (currentBriefId) {
@@ -228,12 +271,23 @@ export default function DashboardClient({
           .catch(console.error);
       }
     } catch (err) {
+      if (isRateLimitError(err) && retryCount < 1) {
+        setGenError(
+          "Groq is rate limited right now (free tier). Waiting 10 seconds and retrying automatically..."
+        );
+        window.setTimeout(() => {
+          void handlePushback(pushbackText, retryCount + 1);
+        }, 10_000);
+        return;
+      }
       console.error(err);
+      setGenError((err as Error).message || "Refinement failed. Please try again.");
+      setBrief(currentBriefSnapshot);
     } finally {
       setIsStreaming(false);
       setIsRefining(false);
     }
-  }, [formInput, currentBriefId]);
+  }, [brief, formInput, currentBriefId]);
 
   // ── handleReset ────────────────────────────────────────────────────────────
   const handleReset = useCallback(() => {
@@ -279,8 +333,8 @@ export default function DashboardClient({
   // ── Auth guard (client-side, based on Firebase onAuthStateChanged) ───────
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] text-white flex flex-col">
-        <header className="border-b border-white/[0.07] px-4 sm:px-6 md:px-10 py-3.5 sm:py-4 bg-[#0A0A0A]/90 backdrop-blur-md sticky top-0 z-40">
+    <div className="min-h-screen flex flex-col text-[var(--text-main)]" style={sheryThemeVars}>
+        <header className="sticky top-0 z-40 border-b border-[var(--night-line)] bg-[rgba(8,16,24,0.88)] px-4 py-3.5 backdrop-blur-md sm:px-6 md:px-10 sm:py-4">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/[0.08]" />
             <div className="h-4 w-40 rounded bg-white/[0.03] border border-white/[0.08]" />
@@ -289,7 +343,7 @@ export default function DashboardClient({
         <main className="flex-1 px-4 sm:px-6 md:px-10 py-6 sm:py-10 max-w-5xl mx-auto w-full">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-white/[0.02] border border-white/[0.07] rounded-2xl p-5 sm:p-6">
+              <div key={i} className="studio-card rounded-2xl p-5 sm:p-6">
                 <div className="h-4 w-2/3 rounded bg-white/[0.04] border border-white/[0.08]" />
                 <div className="mt-4 h-3 w-full rounded bg-white/[0.04] border border-white/[0.08]" />
                 <div className="mt-2 h-3 w-5/6 rounded bg-white/[0.04] border border-white/[0.08]" />
@@ -310,43 +364,52 @@ export default function DashboardClient({
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white flex flex-col">
+    <div
+      className="relative min-h-screen overflow-hidden text-[var(--text-main)]"
+      style={sheryThemeVars}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_16%,rgba(255,125,69,0.2),transparent_22%),radial-gradient(circle_at_84%_12%,rgba(255,182,105,0.12),transparent_20%),linear-gradient(180deg,#070707_0%,#0c0c0c_46%,#070707_100%)]" />
+      <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)", backgroundSize: "68px 68px" }} />
+      <div className="absolute left-[-10rem] top-32 h-[24rem] w-[24rem] rounded-full border border-white/8 bg-[rgba(255,122,61,0.05)] blur-3xl" />
+      <div className="absolute bottom-[-11rem] right-[-8rem] h-[28rem] w-[28rem] rounded-full border border-white/8 bg-[rgba(255,255,255,0.03)] blur-3xl" />
+      <div className="relative z-10 flex min-h-screen flex-col">
 
       {/* ── Dashboard top bar ─────────────────────────────────────────────── */}
-      <header className="border-b border-white/[0.07] px-3 sm:px-6 md:px-10 py-3 sm:py-4 flex items-center justify-between bg-[#0A0A0A]/90 backdrop-blur-md sticky top-0 z-40">
-        <div className="flex items-center gap-2 sm:gap-6">
+      <header className="sticky top-0 z-40 border-b border-[var(--night-line)] bg-[rgba(10,10,10,0.82)] px-3 py-3 backdrop-blur-xl sm:px-6 md:px-10 sm:py-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center justify-between gap-2 sm:gap-6">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <div className="w-6 h-6 rounded-full bg-[#3b82f6] flex items-center justify-center">
-              <span className="text-white font-bold text-xs" style={{ fontFamily: "var(--font-playfair), Georgia, serif" }}>C</span>
+          <Link href="/" className="flex min-w-0 items-center gap-2 shrink-0">
+            <div className="flex h-8 w-8 items-center justify-center rounded-2xl border border-[var(--night-line)] bg-[rgba(255,122,61,0.12)]">
+              <span className="display-font text-sm text-[var(--night-glow)]">N</span>
             </div>
-            <span className="text-white font-semibold text-sm tracking-wide hidden sm:block">Candela</span>
-            <span className="text-[#3b82f6] text-xs font-medium hidden sm:block">/ Tech</span>
+            <span className="display-font text-lg hidden sm:block">Nextstep</span>
+            <span className="hidden text-xs font-medium text-[var(--night-glow)] sm:block">/ Tech studio</span>
           </Link>
 
           {/* Tab navigation */}
-          <nav className="flex items-center gap-0.5 sm:gap-1">
+          <nav className="flex items-center gap-0.5 overflow-x-auto pb-1 scrollbar-none sm:gap-1 sm:overflow-visible sm:pb-0">
             <button
               onClick={() => setTab("generate")}
-              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all ${
+              className={`whitespace-nowrap px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all ${
                 tab === "generate"
-                  ? "bg-[#3b82f6]/15 text-[#3b82f6]"
-                  : "text-white/50 hover:text-white"
+                  ? "bg-[rgba(255,122,61,0.14)] text-[var(--night-glow)]"
+                  : "text-[var(--text-dim)] hover:text-[var(--text-main)]"
               }`}
             >
               Generate
             </button>
             <button
               onClick={() => setTab("history")}
-              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all flex items-center gap-1 sm:gap-1.5 ${
+              className={`whitespace-nowrap px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all flex items-center gap-1 sm:gap-1.5 ${
                 tab === "history"
-                  ? "bg-[#3b82f6]/15 text-[#3b82f6]"
-                  : "text-white/50 hover:text-white"
+                  ? "bg-[rgba(255,122,61,0.14)] text-[var(--night-glow)]"
+                  : "text-[var(--text-dim)] hover:text-[var(--text-main)]"
               }`}
             >
               My Briefs
               {briefs.length > 0 && (
-                <span className="bg-white/10 text-white/60 text-xs px-1.5 py-0.5 rounded-full">
+                <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-xs text-[var(--text-dim)]">
                   {briefs.length}
                 </span>
               )}
@@ -355,29 +418,30 @@ export default function DashboardClient({
         </div>
 
         {/* User menu */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Domain switcher */}
           <Link href="/dashboard/select-domain"
-            className="hidden sm:flex items-center gap-1 px-3 py-1.5 text-white/40 hover:text-white text-xs border border-white/[0.07] hover:border-white/20 rounded-lg transition-all">
+            className="inline-flex items-center gap-1 rounded-lg border border-[var(--night-line)] px-3 py-1.5 text-xs text-[var(--text-dim)] transition-all hover:border-[rgba(255,122,61,0.3)] hover:text-[var(--text-main)]">
             ⌨️ Switch domain
           </Link>
           <div className="hidden sm:flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-[#3b82f6]/20 border border-[#3b82f6]/30 flex items-center justify-center text-xs font-semibold text-[#3b82f6]">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full border border-[rgba(255,122,61,0.28)] bg-[rgba(255,122,61,0.12)] text-xs font-semibold text-[var(--night-glow)]">
               {firstName[0].toUpperCase()}
             </div>
-            <span className="text-white/60 text-sm">{firstName}</span>
+            <span className="text-sm text-[var(--text-dim)]">{firstName}</span>
           </div>
           <button
             onClick={() => signOut({ callbackUrl: "/" })}
-            className="px-2.5 sm:px-3 py-1.5 text-white/40 hover:text-white text-xs border border-white/[0.07] hover:border-white/20 rounded-lg transition-all"
+            className="rounded-lg border border-[var(--night-line)] px-2.5 py-1.5 text-xs text-[var(--text-dim)] transition-all hover:border-[rgba(255,184,108,0.28)] hover:text-[var(--text-main)] sm:px-3"
           >
             Sign out
           </button>
         </div>
+        </div>
       </header>
 
       {/* ── Main content ──────────────────────────────────────────────────── */}
-      <main className="flex-1 px-3 sm:px-6 md:px-10 py-6 sm:py-10 max-w-5xl mx-auto w-full">
+      <main className="mx-auto flex-1 w-full max-w-6xl px-3 py-6 sm:px-6 sm:py-10 md:px-10">
         <AnimatePresence mode="wait">
 
           {/* ── GENERATE TAB ─────────────────────────────────────────────── */}
@@ -391,31 +455,29 @@ export default function DashboardClient({
               className={genView === "form" ? "flex flex-col items-center justify-center min-h-[70vh]" : "w-full"}
             >
               {genView === "form" && (
-                <div className="w-full max-w-2xl mx-auto flex flex-col items-center text-center">
+                <div className="w-full max-w-3xl mx-auto flex flex-col items-center text-center">
                   {/* Greeting */}
                   <div className="mb-6 sm:mb-10 flex flex-col items-center px-1">
-                    <p className="text-white/40 text-sm mb-1">Welcome back, {firstName}.</p>
+                    <p className="mb-3 text-xs uppercase tracking-[0.36em] text-white/42">Welcome back, {firstName}</p>
                     <h1
-                      className="text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight"
-                      style={{ fontFamily: "var(--font-playfair), Georgia, serif" }}
+                      className="display-font text-[2.5rem] leading-[0.94] text-[var(--text-main)] sm:text-5xl md:text-6xl lg:text-7xl"
                     >
-                      What are you{" "}
-                      <span className="text-[#3b82f6] italic">studying today?</span>
+                      Build from what
+                      <span className="block text-[var(--night-glow)]">you finished learning today.</span>
                     </h1>
-                    <p className="mt-3 text-white/45 text-sm sm:text-base max-w-xl leading-relaxed">
-                      Tell Candela where you are. We&apos;ll generate a project brief one step past your
-                      comfort zone — something you can walk into an interview with.
+                    <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-dim)] sm:text-base">
+                      Tell Nextstep what you just learned. We&apos;ll shape it into one project brief with enough friction to teach you, not stall you.
                     </p>
                   </div>
 
                   {genError && (
-                    <div className="mb-4 sm:mb-6 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm w-full text-left">
+                    <div className="mb-4 w-full rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-left text-sm text-red-300 sm:mb-6">
                       {genError}
                     </div>
                   )}
 
                   {/* BriefForm */}
-                  <div className="w-full text-left">
+                  <div className="w-full text-left rounded-[1.5rem] border border-white/8 bg-[rgba(10,10,10,0.58)] p-2 backdrop-blur-xl sm:rounded-[2rem] sm:p-3">
                     <BriefForm onSubmit={handleGenerate} isSubmitting={isStreaming} />
                   </div>
                 </div>
@@ -427,11 +489,17 @@ export default function DashboardClient({
                   <button
                     id="back-to-form-btn"
                     onClick={handleReset}
-                    className="self-start mb-5 sm:mb-8 flex items-center gap-1.5 text-white/50 hover:text-white transition-colors text-sm font-medium group"
+                    className="group mb-5 flex items-center gap-1.5 self-start text-sm font-medium text-[var(--text-dim)] transition-colors hover:text-[var(--text-main)] sm:mb-8"
                   >
                     <span className="group-hover:-translate-x-0.5 transition-transform">←</span>
                     New brief
                   </button>
+
+                  {genError && (
+                    <div className="mb-4 w-full rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-left text-sm text-red-300 sm:mb-6">
+                      {genError}
+                    </div>
+                  )}
 
                   {/* Brief context summary */}
                   {formInput && (
@@ -442,11 +510,8 @@ export default function DashboardClient({
                       <span className="px-2.5 sm:px-3 py-1 bg-white/[0.04] border border-white/[0.07] rounded-full text-xs text-white/60">
                         📅 Week {formInput.week}
                       </span>
-                      <span className="px-2.5 sm:px-3 py-1 bg-white/[0.04] border border-white/[0.07] rounded-full text-xs text-white/60">
-                        💻 {formInput.language}
-                      </span>
                       {formInput.difficulty && (
-                        <span className="px-2.5 sm:px-3 py-1 bg-[#3b82f6]/10 border border-[#3b82f6]/20 rounded-full text-xs text-[#3b82f6]">
+                        <span className="px-2.5 sm:px-3 py-1 rounded-full border border-[rgba(255,122,61,0.22)] bg-[rgba(255,122,61,0.1)] text-xs text-[var(--night-glow)]">
                           ⚡ {["", "Beginner", "Easy", "Standard", "Advanced", "Expert"][formInput.difficulty]}
                         </span>
                       )}
@@ -510,7 +575,7 @@ export default function DashboardClient({
                 </div>
                 <button
                   onClick={() => { setTab("generate"); handleReset(); }}
-                  className="self-start sm:self-auto px-4 sm:px-5 py-2 sm:py-2.5 bg-[#3b82f6] hover:bg-blue-500 text-white text-sm font-medium rounded-full transition-colors active:scale-95"
+                  className="self-start sm:self-auto rounded-full bg-[var(--night-glow)] px-4 py-2 text-sm font-medium text-[#120d09] transition-colors hover:brightness-105 active:scale-95 sm:self-auto sm:px-5 sm:py-2.5"
                 >
                   + New brief
                 </button>
@@ -525,7 +590,7 @@ export default function DashboardClient({
                       onClick={() => setHistoryFilter(f)}
                       className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all border whitespace-nowrap ${
                         historyFilter === f
-                          ? "bg-[#3b82f6]/15 text-[#3b82f6] border-[#3b82f6]/30"
+                          ? "bg-[rgba(255,122,61,0.12)] text-[var(--night-glow)] border-[rgba(255,122,61,0.24)]"
                           : "text-white/40 border-white/[0.07] hover:text-white hover:border-white/20"
                       }`}
                     >
@@ -537,12 +602,12 @@ export default function DashboardClient({
 
               {briefs.length === 0 ? (
                 /* Empty state */
-                <div className="text-center py-16 sm:py-24 border border-white/[0.07] rounded-2xl bg-white/[0.01] px-4">
+                <div className="rounded-[2rem] border border-white/[0.08] bg-white/[0.02] px-4 py-16 text-center sm:py-24">
                   <div className="text-4xl mb-4">📋</div>
                   <p className="text-white/50 mb-6 text-base">No briefs generated yet.</p>
                   <button
                     onClick={() => setTab("generate")}
-                    className="inline-flex items-center px-6 py-3 bg-[#3b82f6] hover:bg-blue-500 text-white font-medium rounded-full text-sm transition-colors active:scale-95"
+                    className="inline-flex items-center rounded-full bg-[var(--night-glow)] px-6 py-3 text-sm font-medium text-[#120d09] transition-colors hover:brightness-105 active:scale-95"
                   >
                     Generate your first brief →
                   </button>
@@ -555,7 +620,7 @@ export default function DashboardClient({
                       initial={{ opacity: 0, y: 16 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.06, duration: 0.35 }}
-                      className="bg-white/[0.02] border border-white/[0.07] rounded-2xl p-6 flex flex-col hover:border-white/[0.15] transition-colors"
+                      className="flex flex-col rounded-[1.75rem] border border-white/[0.08] bg-[rgba(11,11,11,0.72)] p-6 backdrop-blur-xl transition-colors hover:border-[rgba(255,122,61,0.18)]"
                     >
                       <div className="flex items-start justify-between mb-3">
                         <h3 className="font-semibold text-white text-base leading-tight line-clamp-2 flex-1 pr-2">
@@ -574,11 +639,6 @@ export default function DashboardClient({
 
                       <div className="mt-auto pt-4 border-t border-white/[0.06] flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          {b.formInput.language && (
-                            <span className="text-xs text-[#3b82f6] bg-[#3b82f6]/10 px-2 py-1 rounded-full">
-                              {b.formInput.language}
-                            </span>
-                          )}
                           <span className={`text-xs px-2 py-1 rounded-full ${STATUS_STYLES[b.status] || STATUS_STYLES.saved}`}>
                             {STATUS_LABELS[b.status] || "Saved"}
                           </span>
@@ -615,6 +675,7 @@ export default function DashboardClient({
           )}
         </AnimatePresence>
       </main>
+      </div>
     </div>
   );
 }

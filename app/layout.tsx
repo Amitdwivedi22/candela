@@ -1,29 +1,27 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import AuthProvider from "@/components/AuthProvider";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
+const geistSans = localFont({
+  src: "../src/app/fonts/GeistVF.woff",
+  variable: "--font-sans",
 });
 
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  variable: "--font-playfair",
-  weight: ["400", "500", "600", "700", "800", "900"],
-  style: ["normal", "italic"],
+const geistDisplay = localFont({
+  src: "../src/app/fonts/GeistVF.woff",
+  variable: "--font-display",
 });
 
 export const metadata: Metadata = {
-  title: "Candela | Your degree won't get you hired. What you build will.",
+  title: "Nextstep | Build what comes next.",
   description:
-    "Candela turns what you study into projects hiring managers can open. For 16 to 22 year olds building software when junior roles are scarce.",
+    "Nextstep turns what you just learned into a project brief you can start tonight, with runnable scaffolds and sharp checkpoints.",
   keywords: ["project brief", "AI learning", "coding project", "student projects", "personalized"],
   openGraph: {
-    title: "Candela | Your degree won't get you hired. What you build will.",
+    title: "Nextstep | Build what comes next.",
     description:
-      "Candela turns what you study into projects hiring managers can open.",
+      "Nextstep turns fresh course concepts into concrete projects you can ship tonight.",
     type: "website",
   },
 };
@@ -34,16 +32,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
+    <html lang="en" className={`${geistSans.variable} ${geistDisplay.variable}`}>
       <head>
         <link
           rel="icon"
-          href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕯️</text></svg>"
+          href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23ff7a3d'/%3E%3Cstop offset='100%25' stop-color='%23ffb36b'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='8' y='8' width='84' height='84' rx='24' fill='%230b0b0b'/%3E%3Crect x='10' y='10' width='80' height='80' rx='22' fill='none' stroke='url(%23g)' stroke-width='3'/%3E%3Cpath d='M30 72V28h8l24 29V28h8v44h-8L38 43v29z' fill='url(%23g)'/%3E%3C/svg%3E"
         />
       </head>
-      <body className={`${inter.className} antialiased`} suppressHydrationWarning>
+      <body className={`${geistSans.className} antialiased`} suppressHydrationWarning>
         <AuthProvider>
-          <div className="min-h-screen bg-[#0A0A0A] text-white">
+          <div className="min-h-screen bg-[var(--night-ink)] text-[var(--text-main)]">
             {children}
           </div>
         </AuthProvider>

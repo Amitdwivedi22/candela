@@ -64,13 +64,13 @@ export function PushbackInput({ onPushback, isRefining }: PushbackInputProps) {
   };
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 w-full">
+    <div className="w-full rounded-2xl border border-white/8 bg-[rgba(12,12,12,0.78)] p-4 sm:p-6">
       <div className="mb-4">
-        <p className="text-white/50 text-xs font-medium uppercase tracking-wider mb-2">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wider text-white/50">
           Not quite right?
         </p>
-        <h3 className="text-white font-semibold text-lg">Push back and refine</h3>
-        <p className="text-white/50 text-sm mt-1">
+        <h3 className="text-lg font-semibold text-white">Push back and refine</h3>
+        <p className="mt-1 text-sm text-white/50">
           Tell us what to change and we&apos;ll regenerate.
         </p>
       </div>
@@ -86,7 +86,7 @@ export function PushbackInput({ onPushback, isRefining }: PushbackInputProps) {
             maxLength={MAX_CHARS}
             placeholder={PLACEHOLDERS[placeholderIndex]}
             disabled={isRefining}
-            className="w-full bg-[#0A0A0F] border border-white/10 rounded-xl p-4 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500/50 resize-none transition-all disabled:opacity-50"
+            className="w-full resize-none rounded-xl border border-white/10 bg-[#0A0A0F] p-4 text-white placeholder:text-white/40 transition-all focus:outline-none focus:ring-2 focus:ring-[rgba(255,122,61,0.35)] disabled:opacity-50"
           />
           {/* Character counter */}
           <div className="flex justify-end mt-1">
@@ -114,7 +114,7 @@ export function PushbackInput({ onPushback, isRefining }: PushbackInputProps) {
                   // document.querySelector('textarea')?.focus();
                 }}
                 disabled={isRefining}
-                className="bg-white/5 border border-white/10 rounded-full px-3 py-1 text-sm text-white/80 hover:text-white hover:bg-violet-500/20 hover:border-violet-500/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-white/80 transition-colors hover:border-[rgba(255,122,61,0.35)] hover:bg-[rgba(255,122,61,0.14)] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {suggestion}
               </button>
@@ -122,11 +122,11 @@ export function PushbackInput({ onPushback, isRefining }: PushbackInputProps) {
           </div>
         </div>
 
-        <div className="flex justify-end pt-2">
+        <div className="flex justify-stretch pt-2 sm:justify-end">
           <button
             type="submit"
             disabled={!text.trim() || isRefining}
-            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--night-glow)] px-6 py-2.5 font-medium text-[#120d09] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             {isRefining ? (
               <>

@@ -3,6 +3,9 @@ import { auth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import Brief from "@/models/Brief";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
     const session = await auth();

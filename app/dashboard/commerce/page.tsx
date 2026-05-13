@@ -5,7 +5,7 @@ import Brief from "@/models/Brief";
 import CommerceDashboardClient from "./CommerceDashboardClient";
 
 export const metadata = {
-  title: "Candela | Commerce Dashboard",
+  title: "Nextstep | Commerce Dashboard",
 };
 
 export default async function CommerceDashboardPage() {
@@ -20,15 +20,9 @@ export default async function CommerceDashboardPage() {
   const briefs = await Brief.find({ 
     userId: session.user.id,
     domain: "commerce"
-  }).sort({ createdAt: -1 });
-
-  const serializedBriefs = briefs.map((b) => ({
-    _id: b._id.toString(),
-    formInput: b.formInput,
-    brief: b.brief,
-    status: b.status,
-    createdAt: b.createdAt.toISOString(),
-  }));
+  })
+    .sort({ createdAt: -1 })
+    .lean();
 
   const userProp = {
     id: session.user.id,
@@ -36,5 +30,10 @@ export default async function CommerceDashboardPage() {
     email: session.user.email ?? "",
   };
 
-  return <CommerceDashboardClient initialBriefs={serializedBriefs} user={userProp} />;
+  return (
+    <CommerceDashboardClient
+      initialBriefs={JSON.parse(JSON.stringify(briefs))}
+      user={userProp}
+    />
+  );
 }

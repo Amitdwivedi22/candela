@@ -1,144 +1,91 @@
-/**
- * buildPrompt.ts
- *
- * Constructs the prompt sent to the local Ollama backend (not Gemini).
- * Local models (e.g. llama3/mistral) often follow numbered constraints
- * more reliably and can drift on output format unless the constraint is
- * repeated at the top AND bottom.
- *
- * PROMPT SECTIONS (in order) — EXACTLY these four sections:
- *   1. ## Problem
- *   2. ## Starter Scaffold
- *   3. ## Checkpoint Questions
- *   4. ## Stretch Goal
- */
+export interface PromptInput {
+  week: number;
+  projects: string[];
+  difficulty: number;
+  course?: string;
+  pushback?: string;
+  previousBrief?: string;
+}
 
-import { FormInput } from "../types";
+export function buildPrompt({
+  week,
+  projects,
+  difficulty,
+  course,
+  pushback,
+  previousBrief,
+}: PromptInput): string {
+  const topicsByWeek =
+    week <= 3
+      ? {
+          allowed:
+            "np.array(), np.dot(), vector addition, scalar multiplication, 1D arrays only",
+          domain:
+            "grade average calculator, playlist volume normaliser, sports score ranker",
+          forbidden: "matrices, 2D arrays, matrix multiply, linalg, reshape",
+        }
+      : week <= 6
+        ? {
+            allowed:
+              "2D np.array(), matrix multiply with @, np.reshape(), np.linalg.norm(), np.dot() on matrices",
+            domain:
+              "movie similarity finder, NBA shot chart analyser, image brightness matrix, student grade matrix",
+            forbidden:
+              "eigenvalues, SVD, np.linalg.eig, np.linalg.solve",
+          }
+        : {
+            allowed:
+              "np.linalg.solve(), np.linalg.eig(), np.linalg.svd(), projections, least squares",
+            domain:
+              "PCA on a small dataset, least-squares line fitter, simple recommender using cosine similarity",
+            forbidden: "nothing - all topics allowed",
+          };
 
-export function buildPrompt(input: FormInput, pushback?: string): string {
-  const { course, week, projects, language, difficulty = 3, syllabus } = input;
+  const scaffoldGuidance =
+    projects.length === 0
+      ? "Student has NO prior projects. Every function must have a complete working body with hardcoded values. No empty stubs."
+      : projects.length <= 2
+        ? `Student built: ${projects.join(" and ")}. Comfortable with functions and loops. Scaffold can have light stubs but must be runnable.`
+        : `Student built: ${projects.join(", ")}. Experienced. Scaffold shows structure - stubs are acceptable if the main block runs.`;
 
-  const formattedProjects = projects
-    .map((p, i) => `${i + 1}. ${p}`)
-    .join("\n");
+  const difficultyNote =
+    difficulty <= 2
+      ? "Make the problem and scaffold as simple as possible within the allowed topics."
+      : difficulty >= 4
+        ? "Push the complexity to the upper edge of allowed topics. The scaffold should challenge them."
+        : "Balance accessibility and challenge - approachable but not trivial.";
 
-  const difficultyInstructions: Record<number, string> = {
-    1: "Explain every step. No assumed knowledge. First real project.",
-    2: "Guide them clearly. Minimal assumed knowledge.",
-    3: "Some independence required. Skip obvious steps.",
-    4: "Minimal hints. Expect them to look things up.",
-    5: "Production-quality expectations. No hand-holding.",
-  };
+  const basePrompt = `Generate a project brief for this student.
 
-  const sectionFormatConstraint = [
-    "OUTPUT FORMAT CONSTRAINT (MUST FOLLOW EXACTLY):",
-    "Return EXACTLY these four sections (no extras, no missing sections).",
-    "",
-    "## Problem",
-    "[2-3 sentences. Concrete, real-world problem. Be specific: name the dataset/API/domain.]",
-    "",
-    "## Starter Scaffold",
-    "[Write real, runnable code in " +
-      `${language}` +
-      ". No pseudocode. Include import/require statements. Use a single fenced code block like \`\`\`${language.toLowerCase()} ... \`\`\`.]",
-    "",
-    "## Checkpoint Questions",
-    "[3 numbered questions: conceptual, functional, and reflective edge case/failure mode/optimization.]",
-    "",
-    "## Stretch Goal",
-    "[One harder extension using a concept 1-2 weeks ahead. Name the exact technique/library they need.]",
-  ].join("\n");
+STUDENT PROFILE:
+- Course: ${course ?? "Linear Algebra"}
+- Week: ${week}
+- Allowed numpy topics: ${topicsByWeek.allowed}
+- Forbidden topics this week: ${topicsByWeek.forbidden}
+- Prior projects: ${projects.length === 0 ? "none" : projects.join(", ")}
+- ${scaffoldGuidance}
+- Difficulty: ${difficulty}/5 - ${difficultyNote}
 
-  const studentProfileSection = [
-    "Student profile:",
-    `- Course: ${course}`,
-    `- Current week: ${week}`,
-    `- Prior projects they have built:`,
-    formattedProjects.length > 0
-      ? formattedProjects
-      : "- (none provided by user)",
-    `- Preferred programming language: ${language}`,
-  ].join("\n");
+DOMAIN CONSTRAINT:
+Pick exactly ONE domain from this list: ${topicsByWeek.domain}
+Do not pick a domain outside this list.
+Name specific real data in The Problem
+(e.g. "NBA shot coordinates" not just "sports data").
 
-  const syllabusSection = syllabus
-    ? [
-        "Course Syllabus / Topics provided by the student:",
-        `"${syllabus.trim()}"`,
-        "",
-        "CRITICAL: Align the problem, scaffold, and difficulty EXACTLY with the provided syllabus context for the current week.",
-      ].join("\n")
-    : "";
+SCAFFOLD CONSTRAINT:
+Only use these numpy functions: ${topicsByWeek.allowed}
+Do not use: ${topicsByWeek.forbidden}
+The code must run with python script.py and print output with zero changes.
 
-  const pushbackSection = pushback
-    ? [
-        "Student wants changes:",
-        `"${pushback.trim()}"`,
-        "",
-        "Adjust the brief to satisfy the complaint while preserving the same four-section structure.",
-      ].join("\n")
-    : "";
+CHECKPOINT CONSTRAINT:
+Each checkpoint must reference a function defined in your scaffold.
+Each must end with the exact number the student will see in their terminal.
+Expected checkpoint outputs must be single-line scalar values, not arrays, matrices, or multi-line prints.
+Compute the expected output yourself before writing the checkpoint.`;
 
-  // Keep the instruction as a numbered list (local models follow it better).
-  const instructionNumberedList = [
-    "Generate a project brief for a student.",
-    "",
-    "Follow these numbered rules:",
-    "1. Use concepts from week " + week + " of " + course + " specifically.",
-    "2. Be specific and technical; avoid vague guidance.",
-    "3. Do not add any sections beyond the required four sections.",
-    "4. Use the required header names exactly as written.",
-    "5. Use the required code scaffold rules in ## Starter Scaffold.",
-    "6. Write only what the student needs to start implementing immediately.",
-    "",
-    "Quality bar example (read carefully):",
-    'BAD: "Build something with Python that processes data"',
-    'GOOD: "Build a CLI tool in Python that reads a CSV of student grades, calculates the mean and standard deviation per subject using NumPy, and prints a formatted summary table"',
-    "",
-    "Difficulty level: " +
-      difficulty +
-      "/5 — " +
-      difficultyInstructions[difficulty],
-  ].join("\n");
+  if (pushback && previousBrief) {
+    return basePrompt;
+  }
 
-  const scaffoldExplicitCodeRules = [
-    "Scaffold section hard rules (MUST follow):",
-    `- Write actual ${language} code, not pseudocode.`,
-    "- Include import statements with real library/module names.",
-    "- Define concrete function signatures (with parameter names and type hints where applicable).",
-    "- Leave TODO comments inside function bodies (where the student will fill in logic).",
-    "- Every line inside the code block must be valid syntax.",
-    "- Wrap the entire scaffold in a single fenced code block using " +
-      `${language.toLowerCase()}` +
-      " as the language tag.",
-  ].join("\n");
-
-  const weekSpecificInstruction = [
-    `Week focus: Use week ${week} of ${course} as the main driver of the problem + scaffolding choices.`,
-    "Do not default to generic CS-101 content.",
-  ].join("\n");
-
-  const promptTop = [
-    'SYSTEM ROLE (tight): "You are a senior software engineer writing project briefs for students. Be specific, technical, and concise. Never be vague."',
-    "",
-    sectionFormatConstraint,
-    "",
-    studentProfileSection,
-    "",
-    syllabusSection,
-    "",
-    instructionNumberedList,
-    "",
-    scaffoldExplicitCodeRules,
-    "",
-    weekSpecificInstruction,
-    "",
-    pushbackSection,
-  ]
-    .filter(Boolean)
-    .join("\n");
-
-  // Repeat the constraint at the bottom to reduce section drift.
-  const promptBottom = ["", sectionFormatConstraint].join("\n");
-
-  return promptTop + promptBottom;
+  return basePrompt;
 }

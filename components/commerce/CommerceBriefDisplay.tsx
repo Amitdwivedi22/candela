@@ -53,7 +53,7 @@ function SectionCard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.4 }}
-      className="bg-[#0F1A14] border border-white/[0.08] rounded-2xl p-5 sm:p-6"
+      className="rounded-2xl border border-white/[0.08] bg-[rgba(10,10,10,0.78)] p-5 sm:p-6"
     >
       <div className="flex items-center gap-2 mb-4">
         <span className="text-xl">{icon}</span>
@@ -69,9 +69,9 @@ function SectionCard({
               const isSeparator = cells.every(c => c.trim().match(/^[-:]+$/));
               if (isSeparator) return null;
               return (
-                <tr key={ri} className={isHeader ? "border-b border-emerald-500/20" : "border-b border-white/5"}>
+                <tr key={ri} className={isHeader ? "border-b border-[rgba(255,122,61,0.22)]" : "border-b border-white/5"}>
                   {cells.map((cell, ci) => isHeader
-                    ? <th key={ci} className="py-2 px-3 text-left text-emerald-400 font-medium text-xs">{cell.trim()}</th>
+                    ? <th key={ci} className="px-3 py-2 text-left text-xs font-medium text-[var(--night-glow)]">{cell.trim()}</th>
                     : <td key={ci} className="py-2 px-3 text-white/70 text-xs">{cell.trim()}</td>
                   )}
                 </tr>
@@ -105,12 +105,12 @@ function SectionCard({
 export function CommerceBriefDisplay({ rawText, isStreaming, courseName }: CommerceBriefDisplayProps) {
   if (isStreaming || !rawText) {
     return (
-      <div className="bg-[#0F1A14] border border-emerald-500/10 rounded-2xl p-6 sm:p-8">
+      <div className="rounded-2xl border border-[var(--night-line)] bg-[rgba(10,10,10,0.78)] p-6 sm:p-8">
         {isStreaming ? (
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-emerald-400 text-sm font-medium">Generating case study...</span>
+              <span className="w-2 h-2 rounded-full bg-[var(--night-glow)] animate-pulse" />
+              <span className="text-sm font-medium text-[var(--night-glow)]">Generating brief...</span>
             </div>
             <pre className="text-white/70 text-sm leading-relaxed whitespace-pre-wrap font-sans">{rawText}</pre>
           </div>
@@ -127,17 +127,17 @@ export function CommerceBriefDisplay({ rawText, isStreaming, courseName }: Comme
     <div className="flex flex-col gap-4">
       {courseName && (
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-white/40 text-sm">
-          Case study generated for <span className="text-emerald-400">{courseName}</span>
+          Brief generated for <span className="text-[var(--night-glow)]">{courseName}</span>
         </motion.p>
       )}
-      <SectionCard icon="📋" title="Case Study Problem" content={sections["Case Study Problem"]} color="text-emerald-400" delay={0} />
-      <SectionCard icon="📊" title="Data Scaffold" content={sections["Data Scaffold"]} color="text-emerald-300" delay={0.1} />
+      <SectionCard icon="📋" title="Case Study Problem" content={sections["Case Study Problem"]} color="text-[var(--night-glow)]" delay={0} />
+      <SectionCard icon="📊" title="Data Scaffold" content={sections["Data Scaffold"]} color="text-[var(--night-glow)]" delay={0.1} />
       <SectionCard icon="🔍" title="Analysis Checkpoints" content={sections["Analysis Checkpoints"]} color="text-amber-400" delay={0.2} />
-      <SectionCard icon="🚀" title="Advanced Challenge" content={sections["Advanced Challenge"]} color="text-emerald-400" delay={0.3} />
+      <SectionCard icon="🚀" title="Advanced Challenge" content={sections["Advanced Challenge"]} color="text-[var(--night-glow)]" delay={0.3} />
 
       {/* Raw fallback if parsing failed */}
       {!Object.values(sections).some(v => v) && (
-        <div className="bg-[#0F1A14] border border-white/10 rounded-2xl p-6">
+        <div className="rounded-2xl border border-white/10 bg-[rgba(10,10,10,0.78)] p-6">
           <pre className="text-white/70 text-sm leading-relaxed whitespace-pre-wrap font-sans">{rawText}</pre>
         </div>
       )}

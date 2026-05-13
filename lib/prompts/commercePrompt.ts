@@ -11,9 +11,7 @@
 
 export interface CommerceFormInput {
   subject: string;
-  unit: number;
-  semester: number;
-  tool: string;
+  week: number;
   assignmentType: string;
   difficulty: number;
   priorWork: string[];
@@ -23,9 +21,7 @@ export interface CommerceFormInput {
 export function buildCommercePrompt(input: CommerceFormInput, pushback?: string): string {
   const {
     subject,
-    unit,
-    semester,
-    tool,
+    week,
     assignmentType,
     difficulty = 3,
     priorWork,
@@ -52,7 +48,7 @@ export function buildCommercePrompt(input: CommerceFormInput, pushback?: string)
     "[2-3 sentences. Real-world business/finance scenario. Name the actual company, sector, or market. Be specific: include numbers, percentages, or market conditions.]",
     "",
     "## Data Scaffold",
-    `[Provide a structured data table or ${tool} template the student can start working with immediately. Use markdown tables for data. For Excel/Tally: show column headers and 3-5 sample rows. For Python/R: provide a code snippet with sample DataFrame. Include actual numbers - not placeholder values.]`,
+    "[Provide a structured data table or analysis template the student can start working with immediately. Use markdown tables with real column headers and 3-5 sample rows. Include actual numbers - not placeholder values.]",
     "",
     "## Analysis Checkpoints",
     "[3 numbered questions: (1) a quantitative analysis question, (2) a strategic/conceptual question, (3) a critical evaluation or recommendation question.]",
@@ -64,9 +60,7 @@ export function buildCommercePrompt(input: CommerceFormInput, pushback?: string)
   const studentProfile = [
     "Student profile:",
     `- Subject: ${subject}`,
-    `- Semester: ${semester}`,
-    `- Unit/Chapter: ${unit}`,
-    `- Preferred tool: ${tool}`,
+    `- Week: ${week}`,
     `- Assignment type: ${assignmentType}`,
     `- Prior work completed:`,
     formattedPriorWork,
@@ -77,7 +71,7 @@ export function buildCommercePrompt(input: CommerceFormInput, pushback?: string)
         "Course Syllabus / Topics provided by the student:",
         `"${syllabus.trim()}"`,
         "",
-        "CRITICAL: Align the case study problem and analysis EXACTLY with the syllabus context for this unit.",
+        "CRITICAL: Align the case study problem and analysis EXACTLY with the syllabus context for this week.",
       ].join("\n")
     : "";
 
@@ -85,11 +79,11 @@ export function buildCommercePrompt(input: CommerceFormInput, pushback?: string)
     "Generate a commerce/finance project brief for a student.",
     "",
     "Follow these rules:",
-    `1. Use concepts from Unit ${unit} of ${subject} (Semester ${semester}) specifically.`,
+    `1. Use concepts from Week ${week} of ${subject} specifically.`,
     "2. Ground the case study in real companies, real market events, or real financial data.",
     "3. Make numbers specific: use realistic revenue figures, ratios, or percentages.",
     "4. Do NOT use fictional company names like 'ABC Corp'. Use real companies or sectors.",
-    `5. The data scaffold must be usable immediately in ${tool}.`,
+    "5. The data scaffold must be usable immediately without extra setup.",
     "6. Analysis checkpoints must require genuine reasoning, not lookup answers.",
     "",
     `Difficulty level: ${difficulty}/5 — ${difficultyInstructions[difficulty]}`,

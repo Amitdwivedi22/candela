@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PDFParse } from "pdf-parse";
 
 export async function POST(req: NextRequest) {
   try {
-    const pdfParse = require("pdf-parse");
     const formData = await req.formData();
     const file = formData.get("file") as File;
 
@@ -16,8 +16,10 @@ export async function POST(req: NextRequest) {
     let text = "";
 
     if (file.type === "application/pdf") {
-      const data = await pdfParse(buffer);
-      text = data.text;
+      const parser = new PDFParse({ data: buffer });
+      const result = await parser.getText();
+      text = result.text;
+      await parser.destroy();
     } else if (file.type === "text/plain" || file.name.endsWith(".md") || file.name.endsWith(".txt")) {
       text = buffer.toString("utf-8");
     } else {

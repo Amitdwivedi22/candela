@@ -43,12 +43,12 @@ function CodeOrTextDisplay({ content, color }: { content: string; color: string 
           const lang = lines[0].slice(3).trim() || "code";
           const code = lines.slice(1, -1).join("\n");
           return (
-            <div key={i} className="my-3 overflow-hidden rounded-xl border border-amber-500/20 bg-[#0A0704]">
-              <div className="bg-amber-500/10 px-4 py-1.5 border-b border-amber-500/20 text-xs font-mono text-amber-400 flex justify-between">
+            <div key={i} className="my-3 overflow-hidden rounded-xl border border-[var(--night-line)] bg-[#070707]">
+              <div className="flex justify-between border-b border-[var(--night-line)] bg-[rgba(255,122,61,0.08)] px-4 py-1.5 text-xs font-mono text-[var(--night-glow)]">
                 <span>{lang}</span>
               </div>
               <div className="p-4 overflow-x-auto">
-                <pre className="font-mono text-[13px] leading-relaxed text-amber-100">{code}</pre>
+                <pre className="font-mono text-[13px] leading-relaxed text-[#f7efe8]">{code}</pre>
               </div>
             </div>
           );
@@ -92,7 +92,7 @@ function SectionCard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.4 }}
-      className="bg-[#1A130F] border border-white/[0.08] rounded-2xl p-5 sm:p-6"
+      className="rounded-2xl border border-white/[0.08] bg-[rgba(10,10,10,0.78)] p-5 sm:p-6"
     >
       <div className="flex items-center gap-2 mb-4">
         <span className="text-xl">{icon}</span>
@@ -106,12 +106,12 @@ function SectionCard({
 export function EngineeringBriefDisplay({ rawText, isStreaming, courseName }: EngineeringBriefDisplayProps) {
   if (isStreaming || !rawText) {
     return (
-      <div className="bg-[#1A130F] border border-amber-500/10 rounded-2xl p-6 sm:p-8">
+      <div className="rounded-2xl border border-[var(--night-line)] bg-[rgba(10,10,10,0.78)] p-6 sm:p-8">
         {isStreaming ? (
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              <span className="text-amber-400 text-sm font-medium">Generating engineering brief...</span>
+              <span className="w-2 h-2 rounded-full bg-[var(--night-glow)] animate-pulse" />
+              <span className="text-sm font-medium text-[var(--night-glow)]">Generating brief...</span>
             </div>
             <pre className="text-white/70 text-sm leading-relaxed whitespace-pre-wrap font-sans">{rawText}</pre>
           </div>
@@ -128,17 +128,17 @@ export function EngineeringBriefDisplay({ rawText, isStreaming, courseName }: En
     <div className="flex flex-col gap-4">
       {courseName && (
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-white/40 text-sm">
-          Design brief generated for <span className="text-amber-400">{courseName}</span>
+          Brief generated for <span className="text-[var(--night-glow)]">{courseName}</span>
         </motion.p>
       )}
-      <SectionCard icon="📐" title="Design Problem" content={sections["Design Problem"]} color="text-amber-400" delay={0} />
-      <SectionCard icon="⚙️" title="Calculation Scaffold" content={sections["Calculation Scaffold"]} color="text-amber-300" delay={0.1} />
-      <SectionCard icon="🔍" title="Checkpoint Questions" content={sections["Checkpoint Questions"]} color="text-amber-500" delay={0.2} />
-      <SectionCard icon="🚀" title="Stretch Goal" content={sections["Stretch Goal"]} color="text-amber-400" delay={0.3} />
+      <SectionCard icon="📐" title="Design Problem" content={sections["Design Problem"]} color="text-[var(--night-glow)]" delay={0} />
+      <SectionCard icon="⚙️" title="Calculation Scaffold" content={sections["Calculation Scaffold"]} color="text-[var(--night-glow)]" delay={0.1} />
+      <SectionCard icon="🔍" title="Checkpoint Questions" content={sections["Checkpoint Questions"]} color="text-amber-400" delay={0.2} />
+      <SectionCard icon="🚀" title="Stretch Goal" content={sections["Stretch Goal"]} color="text-[var(--night-glow)]" delay={0.3} />
 
       {/* Raw fallback if parsing failed */}
       {!Object.values(sections).some(v => v) && (
-        <div className="bg-[#1A130F] border border-white/10 rounded-2xl p-6">
+        <div className="rounded-2xl border border-white/10 bg-[rgba(10,10,10,0.78)] p-6">
           <pre className="text-white/70 text-sm leading-relaxed whitespace-pre-wrap font-sans">{rawText}</pre>
         </div>
       )}

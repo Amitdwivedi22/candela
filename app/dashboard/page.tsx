@@ -15,7 +15,7 @@ export default async function DashboardPage() {
 
   // Redirect based on chosen domain
   const user = await User.findById(session.user.id);
-  if (!user?.domain) {
+  if (!user?.domain || !["tech", "commerce", "engineering"].includes(user.domain)) {
     redirect("/dashboard/select-domain");
   } else if (user.domain !== "tech") {
     redirect(`/dashboard/${user.domain}`);

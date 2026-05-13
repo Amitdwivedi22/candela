@@ -28,7 +28,7 @@ export interface IBrief extends Document {
   brief: IBriefSection;
   refinements: IRefinement[];
   status: 'saved' | 'in_progress' | 'completed' | 'abandoned';
-  domain: 'tech' | 'commerce' | 'engineering' | 'medical';
+  domain: 'tech' | 'commerce' | 'engineering';
   createdAt: Date;
 }
 
@@ -68,7 +68,7 @@ const BriefSchema: Schema<IBrief> = new Schema(
     },
     domain: {
       type: String,
-      enum: ['tech', 'commerce', 'engineering', 'medical'],
+      enum: ['tech', 'commerce', 'engineering'],
       default: 'tech',
     },
     brief: {

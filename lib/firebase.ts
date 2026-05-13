@@ -38,8 +38,10 @@ const firebaseConfig = {
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// Ensure auth state is persisted locally to avoid a network round-trip on reload.
-void setPersistence(auth, browserLocalPersistence);
+if (typeof window !== "undefined") {
+  // Keep browser-only auth persistence out of the server bundle.
+  void setPersistence(auth, browserLocalPersistence);
+}
 
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({

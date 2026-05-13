@@ -11,7 +11,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const { domain } = await req.json();
-    const validDomains = ["tech", "commerce", "engineering", "medical"];
+    const validDomains = ["tech", "commerce", "engineering"];
     if (!validDomains.includes(domain)) {
       return NextResponse.json({ error: "Invalid domain" }, { status: 400 });
     }
@@ -20,7 +20,7 @@ export async function PATCH(req: NextRequest) {
     const user = await User.findByIdAndUpdate(
       session.user.id,
       { domain },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (!user) {

@@ -30,7 +30,7 @@ export default function UserNav() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-10 h-10 rounded-full bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center text-white font-semibold shadow-lg hover:shadow-violet-500/25 transition-all focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-[linear-gradient(135deg,#ff7a3d,#ffb36b)] text-[#120d09] font-semibold shadow-lg transition-all hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-[rgba(255,122,61,0.35)]"
       >
         {user.image ? (
           <Image src={user.image} alt={user.name || "Avatar"} width={40} height={40} className="w-full h-full rounded-full object-cover" />

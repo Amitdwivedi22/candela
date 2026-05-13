@@ -6,9 +6,7 @@ import { Plus, X, Upload } from "lucide-react";
 
 export interface CommerceBriefFormData {
   subject: string;
-  unit: number;
-  semester: number;
-  tool: string;
+  week: number;
   assignmentType: string;
   difficulty: number;
   priorWork: string[];
@@ -37,15 +35,6 @@ const COMMERCE_SUBJECTS = [
   "Strategic Management", "Corporate Governance",
 ];
 
-const TOOLS = [
-  { value: "Excel/Spreadsheets", label: "Excel / Spreadsheets" },
-  { value: "Tally", label: "Tally ERP" },
-  { value: "Python (Pandas)", label: "Python (Pandas / NumPy)" },
-  { value: "Power BI", label: "Power BI" },
-  { value: "R", label: "R (Statistical)" },
-  { value: "None (Manual Analysis)", label: "None (Manual / Theory)" },
-];
-
 const ASSIGNMENT_TYPES = [
   { value: "Case Study", label: "Case Study" },
   { value: "Financial Report", label: "Financial Report" },
@@ -63,14 +52,12 @@ export default function CommerceBriefForm({
   isSubmitting?: boolean;
 }) {
   const [subject, setSubject] = useState("");
-  const [unit, setUnit] = useState(1);
-  const [semester, setSemester] = useState(1);
-  const [tool, setTool] = useState("");
+  const [week, setWeek] = useState(1);
   const [assignmentType, setAssignmentType] = useState("");
   const [difficulty, setDifficulty] = useState(3);
   const [priorWork, setPriorWork] = useState<string[]>([""]);
   const [syllabus, setSyllabus] = useState("");
-  const [errors, setErrors] = useState<{ subject?: string; tool?: string; assignmentType?: string; priorWork?: string; syllabus?: string }>({});
+  const [errors, setErrors] = useState<{ subject?: string; assignmentType?: string; priorWork?: string; syllabus?: string }>({});
   const [isParsingFile, setIsParsingFile] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isFocused, setIsFocused] = useState(false);
@@ -99,18 +86,17 @@ export default function CommerceBriefForm({
     e.preventDefault();
     const newErrors: typeof errors = {};
     if (!subject.trim()) newErrors.subject = "Subject is required.";
-    if (!tool) newErrors.tool = "Please select a tool.";
     if (!assignmentType) newErrors.assignmentType = "Please select assignment type.";
     const validWork = priorWork.filter(p => p.trim());
     if (validWork.length === 0) newErrors.priorWork = "Add at least one prior assignment or mark as first.";
 
     if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
     setErrors({});
-    onSubmit({ subject, unit, semester, tool, assignmentType, difficulty, priorWork: validWork, syllabus: syllabus.trim() || undefined });
+    onSubmit({ subject, week, assignmentType, difficulty, priorWork: validWork, syllabus: syllabus.trim() || undefined });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="w-full bg-[#0F1A14] border border-emerald-500/10 rounded-2xl p-5 sm:p-8 shadow-2xl flex flex-col gap-6">
+    <form onSubmit={handleSubmit} className="w-full rounded-2xl border border-[var(--night-line)] bg-[rgba(10,10,10,0.78)] p-5 shadow-2xl flex flex-col gap-6 sm:p-8">
 
       {/* Subject */}
       <div className="flex flex-col gap-3 relative z-50">
@@ -128,15 +114,15 @@ export default function CommerceBriefForm({
               if (errors.subject) setErrors(prev => ({ ...prev, subject: undefined }));
               setSuggestions(v.trim() ? COMMERCE_SUBJECTS.filter(s => s.toLowerCase().includes(v.toLowerCase())).slice(0, 5) : []);
             }}
-            className={`w-full bg-[#0F1A14] border ${errors.subject ? "border-red-500" : "border-emerald-500/20"} rounded-xl px-4 py-3.5 text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-shadow`}
+            className={`w-full rounded-xl border ${errors.subject ? "border-red-500" : "border-[var(--night-line)]"} bg-[rgba(255,255,255,0.03)] px-4 py-3.5 text-white placeholder:text-white/30 transition-shadow focus:border-[var(--night-glow)] focus:outline-none focus:ring-1 focus:ring-[rgba(255,122,61,0.25)]`}
           />
           <AnimatePresence>
             {isFocused && suggestions.length > 0 && (
               <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}
-                className="absolute top-full left-0 right-0 mt-2 bg-[#0F1A14] border border-emerald-500/20 rounded-xl shadow-xl overflow-hidden z-50">
+                className="absolute top-full left-0 right-0 mt-2 overflow-hidden rounded-xl border border-[var(--night-line)] bg-[var(--night-panel)] shadow-xl z-50">
                 {suggestions.map(s => (
                   <button key={s} type="button" onClick={() => { setSubject(s); setSuggestions([]); if (errors.subject) setErrors(prev => ({ ...prev, subject: undefined })); }}
-                    className="w-full text-left px-4 py-3 text-white/80 hover:bg-emerald-600/10 hover:text-white transition-colors border-b border-white/5 last:border-0 text-sm">
+                    className="w-full border-b border-white/5 px-4 py-3 text-left text-white/80 transition-colors hover:bg-[rgba(255,122,61,0.12)] hover:text-white last:border-0 text-sm">
                     {s}
                   </button>
                 ))}
@@ -147,46 +133,17 @@ export default function CommerceBriefForm({
         {errors.subject && <span className="text-red-500 text-sm">{errors.subject}</span>}
       </div>
 
-      {/* Semester & Unit row */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col gap-3">
-          <div className="flex justify-between items-center">
-            <label className="text-white/70 text-sm font-medium">Semester</label>
-            <span className="text-emerald-400 font-bold">{semester}</span>
-          </div>
-          <input type="range" min={1} max={8} value={semester} onChange={e => setSemester(Number(e.target.value))}
-            className="w-full h-2 rounded-full appearance-none cursor-pointer"
-            style={{ background: `linear-gradient(to right, #10b981 ${(semester - 1) / 7 * 100}%, #ffffff20 ${(semester - 1) / 7 * 100}%)` }}
-          />
-          <div className="flex justify-between text-white/30 text-xs"><span>Sem 1</span><span>Sem 8</span></div>
-        </div>
-        <div className="flex flex-col gap-3">
-          <div className="flex justify-between items-center">
-            <label className="text-white/70 text-sm font-medium">Unit / Chapter</label>
-            <span className="text-emerald-400 font-bold">{unit}</span>
-          </div>
-          <input type="range" min={1} max={10} value={unit} onChange={e => setUnit(Number(e.target.value))}
-            className="w-full h-2 rounded-full appearance-none cursor-pointer"
-            style={{ background: `linear-gradient(to right, #10b981 ${(unit - 1) / 9 * 100}%, #ffffff20 ${(unit - 1) / 9 * 100}%)` }}
-          />
-          <div className="flex justify-between text-white/30 text-xs"><span>Unit 1</span><span>Unit 10</span></div>
-        </div>
-      </div>
-
-      {/* Tool */}
+      {/* Week */}
       <div className="flex flex-col gap-3">
-        <label className="text-white font-medium">Preferred Tool</label>
-        <div className="relative">
-          <select value={tool} onChange={e => { setTool(e.target.value); if (errors.tool) setErrors(prev => ({ ...prev, tool: undefined })); }}
-            className={`w-full bg-[#0F1A14] border ${errors.tool ? "border-red-500" : "border-emerald-500/20"} text-white rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 appearance-none cursor-pointer`}>
-            <option value="" disabled>Select a tool or software</option>
-            {TOOLS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center">
-            <svg className="w-4 h-4 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-          </div>
+        <div className="flex justify-between items-center">
+          <label className="text-white/70 text-sm font-medium">Week</label>
+          <span className="font-bold text-[var(--night-glow)]">{week}</span>
         </div>
-        {errors.tool && <span className="text-red-500 text-sm">{errors.tool}</span>}
+        <input type="range" min={1} max={52} value={week} onChange={e => setWeek(Number(e.target.value))}
+          className="w-full h-2 rounded-full appearance-none cursor-pointer"
+          style={{ background: `linear-gradient(to right, var(--night-glow) ${(week - 1) / 51 * 100}%, #ffffff20 ${(week - 1) / 51 * 100}%)` }}
+        />
+        <div className="flex justify-between text-white/30 text-xs"><span>Week 1</span><span>Week 52</span></div>
       </div>
 
       {/* Assignment Type */}
@@ -197,8 +154,8 @@ export default function CommerceBriefForm({
             <button key={a.value} type="button" onClick={() => { setAssignmentType(a.value); if (errors.assignmentType) setErrors(prev => ({ ...prev, assignmentType: undefined })); }}
               className={`py-2.5 px-3 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 border text-left ${
                 assignmentType === a.value
-                  ? "bg-emerald-600 border-emerald-500 text-white shadow-[0_0_16px_rgba(16,185,129,0.3)]"
-                  : "bg-transparent border-white/10 text-white/50 hover:border-emerald-500/50 hover:text-white/80"
+                  ? "border-[rgba(255,122,61,0.32)] bg-[rgba(255,122,61,0.16)] text-white shadow-[0_0_16px_rgba(255,122,61,0.22)]"
+                  : "bg-transparent border-white/10 text-white/50 hover:border-[rgba(255,122,61,0.4)] hover:text-white/80"
               }`}>{a.label}</button>
           ))}
         </div>
@@ -209,15 +166,15 @@ export default function CommerceBriefForm({
       <div className="flex flex-col gap-3">
         <div className="flex justify-between items-center">
           <label className="text-white font-medium">Difficulty</label>
-          <span className="text-emerald-400 font-bold text-sm">{DIFFICULTY_LEVELS[difficulty - 1].label}</span>
+          <span className="font-bold text-sm text-[var(--night-glow)]">{DIFFICULTY_LEVELS[difficulty - 1].label}</span>
         </div>
         <div className="grid grid-cols-5 gap-1 sm:gap-2">
           {DIFFICULTY_LEVELS.map(({ label, value }) => (
             <button key={value} type="button" onClick={() => setDifficulty(value)}
               className={`py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 border ${
                 difficulty === value
-                  ? "bg-emerald-600 border-emerald-500 text-white shadow-[0_0_16px_rgba(16,185,129,0.3)]"
-                  : "bg-transparent border-white/10 text-white/50 hover:border-emerald-500/50 hover:text-white/80"
+                  ? "border-[rgba(255,122,61,0.32)] bg-[rgba(255,122,61,0.16)] text-white shadow-[0_0_16px_rgba(255,122,61,0.22)]"
+                  : "bg-transparent border-white/10 text-white/50 hover:border-[rgba(255,122,61,0.4)] hover:text-white/80"
               }`}>{label}</button>
           ))}
         </div>
@@ -229,7 +186,7 @@ export default function CommerceBriefForm({
           <label className="text-white font-medium">Prior Assignments & Submissions</label>
           {priorWork.length < 4 && (
             <button type="button" onClick={() => setPriorWork([...priorWork, ""])}
-              className="flex items-center gap-1.5 text-sm text-emerald-400 hover:text-emerald-300 transition-colors font-medium">
+              className="flex items-center gap-1.5 text-sm font-medium text-[var(--night-glow)] transition-colors hover:text-[var(--night-warm)]">
               <Plus className="w-4 h-4" /> Add
             </button>
           )}
@@ -239,7 +196,7 @@ export default function CommerceBriefForm({
             <motion.div key={index} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }} className="relative flex items-center">
               <input type="text" placeholder="e.g. Prepared a SWOT analysis on Reliance Industries"
                 value={work} onChange={e => { const n = [...priorWork]; n[index] = e.target.value; setPriorWork(n); if (errors.priorWork) setErrors(prev => ({ ...prev, priorWork: undefined })); }}
-                className={`w-full bg-[#0F1A14] border ${errors.priorWork ? "border-red-500" : "border-emerald-500/20"} rounded-xl px-4 py-3.5 text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-shadow pr-12`}
+                className={`w-full rounded-xl border ${errors.priorWork ? "border-red-500" : "border-[var(--night-line)]"} bg-[rgba(255,255,255,0.03)] px-4 py-3.5 pr-12 text-white placeholder:text-white/30 transition-shadow focus:border-[var(--night-glow)] focus:outline-none focus:ring-1 focus:ring-[rgba(255,122,61,0.25)]`}
               />
               {priorWork.length > 1 && (
                 <button type="button" onClick={() => setPriorWork(priorWork.filter((_, i) => i !== index))}
@@ -260,26 +217,26 @@ export default function CommerceBriefForm({
           <div className="relative">
             <input ref={fileInputRef} type="file" id="commerce-syllabus-file" accept=".pdf,.txt,.md" className="hidden" onChange={handleFileUpload} disabled={isParsingFile} />
             <label htmlFor="commerce-syllabus-file"
-              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${isParsingFile ? "bg-white/5 border-white/10 text-white/40 cursor-not-allowed" : "bg-white/[0.04] border-white/10 text-white/70 hover:bg-emerald-500/10 hover:border-emerald-500/30 hover:text-emerald-300"}`}>
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all cursor-pointer ${isParsingFile ? "cursor-not-allowed border-white/10 bg-white/5 text-white/40" : "border-white/10 bg-white/[0.04] text-white/70 hover:border-[rgba(255,122,61,0.3)] hover:bg-[rgba(255,122,61,0.1)] hover:text-[var(--night-warm)]"}`}>
               {isParsingFile ? (<><svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 22 6.477 22 12h-4z"/></svg>Extracting...</>) : (<><Upload className="w-3.5 h-3.5" />Upload PDF/TXT</>)}
             </label>
           </div>
         </div>
         <textarea placeholder="Paste your syllabus topics here for a more accurate case study..." value={syllabus} onChange={e => setSyllabus(e.target.value)} rows={3}
-          className="w-full bg-[#0F1A14] border border-emerald-500/20 rounded-xl px-4 py-3.5 text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-shadow resize-none" />
+          className="w-full resize-none rounded-xl border border-[var(--night-line)] bg-[rgba(255,255,255,0.03)] px-4 py-3.5 text-white placeholder:text-white/30 transition-shadow focus:border-[var(--night-glow)] focus:outline-none focus:ring-1 focus:ring-[rgba(255,122,61,0.25)]" />
         {errors.syllabus && <span className="text-red-500 text-sm">{errors.syllabus}</span>}
-        <span className="text-white/40 text-xs">Helps align the case study to your exact curriculum unit.</span>
+        <span className="text-white/40 text-xs">Helps align the brief to your current course topics for the week.</span>
       </div>
 
       {/* Submit */}
       <button type="submit" disabled={isSubmitting} aria-live="polite"
-        className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl transition-all duration-200 shadow-[0_0_24px_rgba(16,185,129,0.2)] hover:shadow-[0_0_32px_rgba(16,185,129,0.35)]">
+        className="w-full rounded-xl bg-[var(--night-glow)] py-4 font-semibold text-[#120d09] transition-all duration-200 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50 shadow-[0_0_24px_rgba(255,122,61,0.2)] hover:shadow-[0_0_32px_rgba(255,122,61,0.35)]">
         {isSubmitting ? (
           <span className="flex items-center justify-center gap-2">
             <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 22 6.477 22 12h-4z"/></svg>
-            Generating case study...
+            Generating brief...
           </span>
-        ) : "Generate My Case Study →"}
+        ) : "Generate Commerce Brief →"}
       </button>
     </form>
   );

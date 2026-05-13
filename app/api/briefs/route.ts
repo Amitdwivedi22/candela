@@ -3,6 +3,9 @@ import { auth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import Brief from "@/models/Brief";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
   try {
     const session = await auth();
@@ -11,7 +14,7 @@ export async function GET(req: Request) {
     }
 
     const { searchParams } = new URL(req.url);
-    const domain = (searchParams.get("domain") as "tech" | "commerce" | "engineering" | "medical") || "tech";
+    const domain = (searchParams.get("domain") as "tech" | "commerce" | "engineering") || "tech";
 
     await connectToDatabase();
     const briefs = await Brief.find({ userId: session.user.id, domain })
