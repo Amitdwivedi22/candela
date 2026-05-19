@@ -16,6 +16,17 @@ import { jsPDF } from "jspdf";
 import type { BriefSection } from "../types";
 import type { FormInput } from "../types";
 
+interface ExportPDFLabels {
+  problem: string;
+  scaffold: string;
+  checkpoints: string;
+  stretch: string;
+}
+
+interface ExportPDFOptions {
+  labels?: Partial<ExportPDFLabels>;
+}
+
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const PAGE_W  = 210;   // A4 width  (mm)
@@ -189,7 +200,21 @@ function drawFooter(doc: jsPDF, courseName: string, week: number | string) {
 // ── Main export function ───────────────────────────────────────────────────────
 
 export function exportBriefAsPDF(brief: BriefSection, formInput: FormInput): void {
+  exportBriefAsPDFWithOptions(brief, formInput);
+}
+
+export function exportBriefAsPDFWithOptions(
+  brief: BriefSection,
+  formInput: FormInput,
+  options: ExportPDFOptions = {}
+): void {
   const { course, week } = formInput;
+  const labels: ExportPDFLabels = {
+    problem: options.labels?.problem ?? "The Problem",
+    scaffold: options.labels?.scaffold ?? "Starter Scaffold",
+    checkpoints: options.labels?.checkpoints ?? "Checkpoint Questions",
+    stretch: options.labels?.stretch ?? "Stretch Goal",
+  };
   const doc = new jsPDF({ unit: "mm", format: "a4" });
 
   // ── Page 1 setup ──────────────────────────────────────────────────────────
@@ -197,7 +222,7 @@ export function exportBriefAsPDF(brief: BriefSection, formInput: FormInput): voi
   let y = drawHeader(doc, course, week);
 
   // ── Section 01 – The Problem ──────────────────────────────────────────────
-  y = drawSectionHeader(doc, "01", "The Problem", VIOLET_TEXT, y);
+  y = drawSectionHeader(doc, "01", labels.problem, VIOLET_TEXT, y);
   y = printWrapped(doc, (brief.problem || "").trim(), MARGIN, y, {
     fontSize: 10.5,
     lineHeight: 6,
@@ -207,7 +232,7 @@ export function exportBriefAsPDF(brief: BriefSection, formInput: FormInput): voi
   y = drawDivider(doc, y);
 
   // ── Section 02 – Starter Scaffold ─────────────────────────────────────────
-  y = drawSectionHeader(doc, "02", "Starter Scaffold", TEAL_TEXT, y);
+  y = drawSectionHeader(doc, "02", labels.scaffold, TEAL_TEXT, y);
 
   // Strip markdown code fences if present
   const rawScaffold = (brief.scaffold || "")
@@ -269,7 +294,7 @@ export function exportBriefAsPDF(brief: BriefSection, formInput: FormInput): voi
   y = drawDivider(doc, y + 2);
 
   // ── Section 03 – Checkpoint Questions ────────────────────────────────────
-  y = drawSectionHeader(doc, "03", "Checkpoint Questions", AMBER_TEXT, y);
+  y = drawSectionHeader(doc, "03", labels.checkpoints, AMBER_TEXT, y);
   const checkpoints = brief.checkpoints ?? [];
   for (let i = 0; i < checkpoints.length; i++) {
     if (y > PAGE_H - 24) {
@@ -302,7 +327,7 @@ export function exportBriefAsPDF(brief: BriefSection, formInput: FormInput): voi
   y = drawDivider(doc, y);
 
   // ── Section 04 – Stretch Goal ─────────────────────────────────────────────
-  y = drawSectionHeader(doc, "04", "Stretch Goal", ROSE_TEXT, y);
+  y = drawSectionHeader(doc, "04", labels.stretch, ROSE_TEXT, y);
 
   // "Challenge" badge
   doc.setFont("helvetica", "bold");

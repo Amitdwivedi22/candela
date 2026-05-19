@@ -4,8 +4,8 @@ const path = require("path");
 const { removeDevBuildArtifacts, shouldCleanForDevStart } = require("./clean-next");
 
 const port = process.env.PORT || "3000";
-const host = "127.0.0.1";
-const url = `http://localhost:${port}`;
+const host = process.env.HOST || "localhost";
+const url = `http://${host}:${port}`;
 process.env.NODE_ENV = process.env.NODE_ENV || "development";
 process.env.NEXT_DIST_DIR = process.env.NEXT_DIST_DIR || ".next-dev";
 const devEnv = { ...process.env };

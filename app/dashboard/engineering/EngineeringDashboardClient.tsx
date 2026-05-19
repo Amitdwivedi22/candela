@@ -4,8 +4,7 @@ import { CSSProperties, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
-import { useAuthGuard } from "@/lib/useAuthGuard";
+import { signOut, useSession } from "next-auth/react";
 import EngineeringBriefForm, { EngineeringBriefFormData } from "@/components/engineering/EngineeringBriefForm";
 import { EngineeringBriefDisplay } from "@/components/engineering/EngineeringBriefDisplay";
 import { PushbackInput } from "@/components/PushbackInput";
@@ -91,7 +90,7 @@ export default function EngineeringDashboardClient({
   user: User;
 }) {
   const router = useRouter();
-  const { loading: authLoading, user: firebaseUser } = useAuthGuard();
+  const { status } = useSession();
 
   const [tab, setTab] = useState<Tab>("generate");
   const [genView, setGenView] = useState<"form" | "brief">("form");
@@ -263,7 +262,7 @@ export default function EngineeringDashboardClient({
 
   const firstName = user.name?.split(" ")[0] || "there";
 
-  if (authLoading) {
+  if (status === "loading") {
     return (
       <div className="min-h-screen flex flex-col text-[var(--text-main)]" style={sheryThemeVars}>
         <header className="sticky top-0 z-40 border-b border-[var(--night-line)] bg-[rgba(10,10,10,0.82)] px-4 py-3.5 backdrop-blur-xl sm:px-6 md:px-10 sm:py-4">
@@ -275,7 +274,7 @@ export default function EngineeringDashboardClient({
       </div>
     );
   }
-  if (!firebaseUser) {
+  if (status === "unauthenticated") {
     router.replace("/login");
     return null;
   }
@@ -288,17 +287,51 @@ export default function EngineeringDashboardClient({
       <div className="absolute bottom-[-11rem] right-[-8rem] h-[28rem] w-[28rem] rounded-full border border-white/8 bg-[rgba(255,255,255,0.03)] blur-3xl" />
 
       <div className="relative z-10 flex min-h-screen flex-col">
-        <header className="sticky top-0 z-40 flex items-center justify-between border-b border-[var(--night-line)] bg-[rgba(10,10,10,0.82)] px-3 py-3 backdrop-blur-xl sm:px-6 md:px-10 sm:py-4">
-          <div className="flex items-center gap-2 sm:gap-6">
-            <Link href="/" className="flex shrink-0 items-center gap-2">
+        <header className="sticky top-0 z-40 border-b border-[var(--night-line)] bg-[rgba(10,10,10,0.82)] px-3 py-3 backdrop-blur-xl sm:px-6 md:px-10 sm:py-4">
+          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+            <Link href="/" className="flex shrink-0 items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-2xl border border-[var(--night-line)] bg-[rgba(255,122,61,0.12)]">
                 <span className="display-font text-sm text-[var(--night-glow)]">N</span>
               </div>
-              <span className="hidden display-font text-lg sm:block">Nextstep</span>
-              <span className="hidden text-xs font-medium text-[var(--night-glow)] sm:block">/ Engineering studio</span>
+              <span className="display-font text-lg text-[var(--text-main)]">Nextstep</span>
             </Link>
+            <div className="hidden h-8 w-px bg-[var(--night-line)] sm:block" />
+            <div className="min-w-0 flex-1 rounded-2xl border border-[var(--night-line)] bg-[rgba(255,122,61,0.08)] px-3 py-2 sm:px-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--text-dim)]">
+                Active studio
+              </p>
+              <p className="truncate text-sm font-semibold text-[var(--night-glow)] sm:text-[15px]">
+                Engineering Dashboard
+              </p>
+            </div>
+            </div>
 
-            <nav className="flex items-center gap-0.5 sm:gap-1">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 lg:justify-end">
+              <Link
+                href="/dashboard/select-domain"
+                className="inline-flex items-center gap-1 rounded-lg border border-[var(--night-line)] px-3 py-1.5 text-xs text-[var(--text-dim)] transition-all hover:border-[rgba(255,122,61,0.3)] hover:text-[var(--text-main)]"
+              >
+                Switch domain
+              </Link>
+              <div className="hidden items-center gap-2 sm:flex">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full border border-[rgba(255,122,61,0.28)] bg-[rgba(255,122,61,0.12)] text-xs font-semibold text-[var(--night-glow)]">
+                  {firstName[0].toUpperCase()}
+                </div>
+                <span className="text-sm text-[var(--text-dim)]">{firstName}</span>
+              </div>
+              <button
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className="rounded-lg border border-[var(--night-line)] px-2.5 py-1.5 text-xs text-[var(--text-dim)] transition-all hover:border-[rgba(255,184,108,0.28)] hover:text-[var(--text-main)] sm:px-3"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+
+            <div className="overflow-x-auto pb-1 scrollbar-none">
+            <nav className="flex min-w-max items-center gap-0.5 sm:gap-1">
               {(["generate", "history"] as const).map((item) => (
                 <button
                   key={item}
@@ -313,27 +346,7 @@ export default function EngineeringDashboardClient({
                 </button>
               ))}
             </nav>
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Link
-              href="/dashboard/select-domain"
-              className="hidden items-center gap-1 rounded-lg border border-[var(--night-line)] px-3 py-1.5 text-xs text-[var(--text-dim)] transition-all hover:border-[rgba(255,122,61,0.3)] hover:text-[var(--text-main)] sm:flex"
-            >
-              Switch domain
-            </Link>
-            <div className="hidden items-center gap-2 sm:flex">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full border border-[rgba(255,122,61,0.28)] bg-[rgba(255,122,61,0.12)] text-xs font-semibold text-[var(--night-glow)]">
-                {firstName[0].toUpperCase()}
-              </div>
-              <span className="text-sm text-[var(--text-dim)]">{firstName}</span>
             </div>
-            <button
-              onClick={() => signOut({ callbackUrl: "/" })}
-              className="rounded-lg border border-[var(--night-line)] px-2.5 py-1.5 text-xs text-[var(--text-dim)] transition-all hover:border-[rgba(255,184,108,0.28)] hover:text-[var(--text-main)] sm:px-3"
-            >
-              Sign out
-            </button>
           </div>
         </header>
 
@@ -391,7 +404,13 @@ export default function EngineeringDashboardClient({
                       </div>
                     )}
 
-                    <EngineeringBriefDisplay rawText={streamingText} isStreaming={isStreaming} courseName={currentSubject} />
+                    <EngineeringBriefDisplay
+                      rawText={streamingText}
+                      isStreaming={isStreaming}
+                      courseName={currentSubject}
+                      brief={brief}
+                      formInput={formInput}
+                    />
 
                     {brief && !isStreaming && formInput && (
                       <div className="mt-6 space-y-4">

@@ -2,15 +2,20 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import AuthProvider from "@/components/AuthProvider";
+import NavigationProgress from "@/components/NavigationProgress";
+import PageTransition from "@/components/PageTransition";
+import { auth } from "@/lib/auth";
 
 const geistSans = localFont({
   src: "../src/app/fonts/GeistVF.woff",
   variable: "--font-sans",
+  display: "swap",
 });
 
 const geistDisplay = localFont({
   src: "../src/app/fonts/GeistVF.woff",
   variable: "--font-display",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -26,11 +31,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth();
+
   return (
     <html lang="en" className={`${geistSans.variable} ${geistDisplay.variable}`}>
       <head>
@@ -40,9 +47,11 @@ export default function RootLayout({
         />
       </head>
       <body className={`${geistSans.className} antialiased`} suppressHydrationWarning>
-        <AuthProvider>
+        <AuthProvider session={session}>
+          {/* Orange thin progress bar — fires on every route change */}
+          <NavigationProgress />
           <div className="min-h-screen bg-[var(--night-ink)] text-[var(--text-main)]">
-            {children}
+            <PageTransition>{children}</PageTransition>
           </div>
         </AuthProvider>
       </body>

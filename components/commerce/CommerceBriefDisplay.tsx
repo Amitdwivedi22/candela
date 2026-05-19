@@ -1,11 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
+import { Download, Loader2 } from "lucide-react";
+import type { BriefSection, FormInput } from "@/types";
 
 interface CommerceBriefDisplayProps {
   rawText: string;
   isStreaming: boolean;
   courseName?: string;
+  brief?: BriefSection | null;
+  formInput?: FormInput | null;
 }
 
 function parseCommerceBrief(text: string) {
@@ -102,7 +107,36 @@ function SectionCard({
   );
 }
 
-export function CommerceBriefDisplay({ rawText, isStreaming, courseName }: CommerceBriefDisplayProps) {
+export function CommerceBriefDisplay({
+  rawText,
+  isStreaming,
+  courseName,
+  brief,
+  formInput,
+}: CommerceBriefDisplayProps) {
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    if (!brief || !formInput || isStreaming || pdfLoading) return;
+    setPdfLoading(true);
+    try {
+      const { exportBriefAsPDFWithOptions } = await import("@/lib/exportPDF");
+      await new Promise<void>((resolve) => setTimeout(resolve, 50));
+      exportBriefAsPDFWithOptions(brief, formInput, {
+        labels: {
+          problem: "Case Study Problem",
+          scaffold: "Data Scaffold",
+          checkpoints: "Analysis Checkpoints",
+          stretch: "Advanced Challenge",
+        },
+      });
+    } catch (error) {
+      console.error("PDF export failed:", error);
+    } finally {
+      setTimeout(() => setPdfLoading(false), 300);
+    }
+  };
+
   if (isStreaming || !rawText) {
     return (
       <div className="rounded-2xl border border-[var(--night-line)] bg-[rgba(10,10,10,0.78)] p-6 sm:p-8">
@@ -125,11 +159,26 @@ export function CommerceBriefDisplay({ rawText, isStreaming, courseName }: Comme
 
   return (
     <div className="flex flex-col gap-4">
-      {courseName && (
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-white/40 text-sm">
-          Brief generated for <span className="text-[var(--night-glow)]">{courseName}</span>
-        </motion.p>
-      )}
+      <div className="flex flex-col gap-3 border-b border-[var(--night-line)] pb-4 sm:flex-row sm:items-center sm:justify-between">
+        {courseName ? (
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-white/40 text-sm">
+            Brief generated for <span className="text-[var(--night-glow)]">{courseName}</span>
+          </motion.p>
+        ) : (
+          <div />
+        )}
+
+        <button
+          id="download-pdf-btn-commerce"
+          onClick={handleDownloadPDF}
+          disabled={!brief || !formInput || isStreaming || pdfLoading}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--night-glow)] px-4 py-2 text-sm font-semibold text-[#120d09] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+        >
+          {pdfLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          {pdfLoading ? "Building..." : "Download PDF"}
+        </button>
+      </div>
+
       <SectionCard icon="📋" title="Case Study Problem" content={sections["Case Study Problem"]} color="text-[var(--night-glow)]" delay={0} />
       <SectionCard icon="📊" title="Data Scaffold" content={sections["Data Scaffold"]} color="text-[var(--night-glow)]" delay={0.1} />
       <SectionCard icon="🔍" title="Analysis Checkpoints" content={sections["Analysis Checkpoints"]} color="text-amber-400" delay={0.2} />

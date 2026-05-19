@@ -1,5 +1,7 @@
+import type { FirebaseApp } from "firebase/app";
 import { getApp, getApps, initializeApp } from "firebase/app";
 import {
+  type Auth,
   browserLocalPersistence,
   getAuth,
   GoogleAuthProvider,
@@ -25,6 +27,11 @@ if (missingFirebaseEnvVars.length > 0) {
   );
 }
 
+const isFirebaseConfigured = missingFirebaseEnvVars.length === 0;
+const firebaseConfigErrorMessage = isFirebaseConfigured
+  ? ""
+  : `Firebase is not fully configured. Missing: ${missingFirebaseEnvVars.join(", ")}.`;
+
 const firebaseConfig = {
   apiKey: requiredFirebaseEnvVars.apiKey ?? "",
   authDomain: requiredFirebaseEnvVars.authDomain ?? "",
@@ -35,10 +42,15 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
+const app: FirebaseApp | null = isFirebaseConfigured
+  ? getApps().length
+    ? getApp()
+    : initializeApp(firebaseConfig)
+  : null;
 
-if (typeof window !== "undefined") {
+const auth: Auth | null = app ? getAuth(app) : null;
+
+if (typeof window !== "undefined" && auth) {
   // Keep browser-only auth persistence out of the server bundle.
   void setPersistence(auth, browserLocalPersistence);
 }
@@ -48,4 +60,4 @@ googleProvider.setCustomParameters({
   prompt: "select_account",
 });
 
-export { app, auth, googleProvider };
+export { app, auth, firebaseConfigErrorMessage, googleProvider, isFirebaseConfigured };

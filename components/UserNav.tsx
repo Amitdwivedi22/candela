@@ -1,13 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { useSession, signOut } from "next-auth/react";
+import { signOut } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
+import type { Session } from "next-auth";
 
-export default function UserNav() {
-  const { data: session } = useSession();
+/**
+ * UserNav accepts `session` as a prop instead of calling useSession()
+ * internally. This prevents an extra /api/auth/session call whenever
+ * a parent component already has the session (e.g. DashboardClient).
+ *
+ * Usage:
+ *   const { data: session } = useSession();   // caller's single hook
+ *   <UserNav session={session} />              // pass it down
+ */
+export default function UserNav({ session }: { session: Session | null | undefined }) {
   const [isOpen, setIsOpen] = useState(false);
 
   if (!session?.user) {
@@ -24,7 +33,10 @@ export default function UserNav() {
   }
 
   const user = session.user;
-  const initials = user.name?.substring(0, 2).toUpperCase() || user.email?.substring(0, 2).toUpperCase() || "US";
+  const initials =
+    user.name?.substring(0, 2).toUpperCase() ||
+    user.email?.substring(0, 2).toUpperCase() ||
+    "US";
 
   return (
     <div className="relative">
@@ -33,7 +45,13 @@ export default function UserNav() {
         className="flex h-10 w-10 items-center justify-center rounded-full bg-[linear-gradient(135deg,#ff7a3d,#ffb36b)] text-[#120d09] font-semibold shadow-lg transition-all hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-[rgba(255,122,61,0.35)]"
       >
         {user.image ? (
-          <Image src={user.image} alt={user.name || "Avatar"} width={40} height={40} className="w-full h-full rounded-full object-cover" />
+          <Image
+            src={user.image}
+            alt={user.name || "Avatar"}
+            width={40}
+            height={40}
+            className="w-full h-full rounded-full object-cover"
+          />
         ) : (
           initials
         )}

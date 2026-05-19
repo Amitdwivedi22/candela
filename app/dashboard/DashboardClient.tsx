@@ -5,12 +5,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import BriefForm, { BriefFormData } from "@/components/BriefForm";
 import { BriefDisplay } from "@/components/BriefDisplay";
 import { PushbackInput } from "@/components/PushbackInput";
 import { ChatPanel } from "@/components/ChatPanel";
-import { useAuthGuard } from "@/lib/useAuthGuard";
 import type { BriefSection, FormInput } from "@/types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -118,8 +117,7 @@ export default function DashboardClient({
   user: User;
 }) {
   const router = useRouter();
-
-  const { loading: authLoading, user: firebaseUser } = useAuthGuard();
+  const { status } = useSession();
 
   // ── Navigation state ──────────────────────────────────────────────────────
   const [tab, setTab] = useState<Tab>("generate");
@@ -330,8 +328,7 @@ export default function DashboardClient({
 
   const firstName = user.name?.split(" ")[0] || "there";
 
-  // ── Auth guard (client-side, based on Firebase onAuthStateChanged) ───────
-  if (authLoading) {
+  if (status === "loading") {
     return (
     <div className="min-h-screen flex flex-col text-[var(--text-main)]" style={sheryThemeVars}>
         <header className="sticky top-0 z-40 border-b border-[var(--night-line)] bg-[rgba(8,16,24,0.88)] px-4 py-3.5 backdrop-blur-md sm:px-6 md:px-10 sm:py-4">
@@ -356,7 +353,7 @@ export default function DashboardClient({
     );
   }
 
-  if (!firebaseUser) {
+  if (status === "unauthenticated") {
     // Replace so back button doesn't return to the dashboard.
     router.replace("/login");
     return null;
@@ -376,19 +373,48 @@ export default function DashboardClient({
 
       {/* ── Dashboard top bar ─────────────────────────────────────────────── */}
       <header className="sticky top-0 z-40 border-b border-[var(--night-line)] bg-[rgba(10,10,10,0.82)] px-3 py-3 backdrop-blur-xl sm:px-6 md:px-10 sm:py-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-center justify-between gap-2 sm:gap-6">
-          {/* Logo */}
-          <Link href="/" className="flex min-w-0 items-center gap-2 shrink-0">
+        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+          <Link href="/" className="flex shrink-0 items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-2xl border border-[var(--night-line)] bg-[rgba(255,122,61,0.12)]">
               <span className="display-font text-sm text-[var(--night-glow)]">N</span>
             </div>
-            <span className="display-font text-lg hidden sm:block">Nextstep</span>
-            <span className="hidden text-xs font-medium text-[var(--night-glow)] sm:block">/ Tech studio</span>
+            <span className="display-font text-lg text-[var(--text-main)]">Nextstep</span>
           </Link>
+          <div className="hidden h-8 w-px bg-[var(--night-line)] sm:block" />
+          <div className="min-w-0 flex-1 rounded-2xl border border-[var(--night-line)] bg-[rgba(255,122,61,0.08)] px-3 py-2 sm:px-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--text-dim)]">
+              Active studio
+            </p>
+            <p className="truncate text-sm font-semibold text-[var(--night-glow)] sm:text-[15px]">
+              Software and Tech Dashboard
+            </p>
+          </div>
+        </div>
 
-          {/* Tab navigation */}
-          <nav className="flex items-center gap-0.5 overflow-x-auto pb-1 scrollbar-none sm:gap-1 sm:overflow-visible sm:pb-0">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 lg:justify-end">
+          <Link href="/dashboard/select-domain"
+            className="inline-flex items-center gap-1 rounded-lg border border-[var(--night-line)] px-3 py-1.5 text-xs text-[var(--text-dim)] transition-all hover:border-[rgba(255,122,61,0.3)] hover:text-[var(--text-main)]">
+            Switch domain
+          </Link>
+          <div className="hidden sm:flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full border border-[rgba(255,122,61,0.28)] bg-[rgba(255,122,61,0.12)] text-xs font-semibold text-[var(--night-glow)]">
+              {firstName[0].toUpperCase()}
+            </div>
+            <span className="text-sm text-[var(--text-dim)]">{firstName}</span>
+          </div>
+          <button
+            onClick={() => signOut({ callbackUrl: "/" })}
+            className="rounded-lg border border-[var(--night-line)] px-2.5 py-1.5 text-xs text-[var(--text-dim)] transition-all hover:border-[rgba(255,184,108,0.28)] hover:text-[var(--text-main)] sm:px-3"
+          >
+            Sign out
+          </button>
+        </div>
+        </div>
+
+        <div className="overflow-x-auto pb-1 scrollbar-none">
+          <nav className="flex min-w-max items-center gap-0.5 sm:gap-1">
             <button
               onClick={() => setTab("generate")}
               className={`whitespace-nowrap px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all ${
@@ -415,27 +441,6 @@ export default function DashboardClient({
               )}
             </button>
           </nav>
-        </div>
-
-        {/* User menu */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          {/* Domain switcher */}
-          <Link href="/dashboard/select-domain"
-            className="inline-flex items-center gap-1 rounded-lg border border-[var(--night-line)] px-3 py-1.5 text-xs text-[var(--text-dim)] transition-all hover:border-[rgba(255,122,61,0.3)] hover:text-[var(--text-main)]">
-            ⌨️ Switch domain
-          </Link>
-          <div className="hidden sm:flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full border border-[rgba(255,122,61,0.28)] bg-[rgba(255,122,61,0.12)] text-xs font-semibold text-[var(--night-glow)]">
-              {firstName[0].toUpperCase()}
-            </div>
-            <span className="text-sm text-[var(--text-dim)]">{firstName}</span>
-          </div>
-          <button
-            onClick={() => signOut({ callbackUrl: "/" })}
-            className="rounded-lg border border-[var(--night-line)] px-2.5 py-1.5 text-xs text-[var(--text-dim)] transition-all hover:border-[rgba(255,184,108,0.28)] hover:text-[var(--text-main)] sm:px-3"
-          >
-            Sign out
-          </button>
         </div>
         </div>
       </header>

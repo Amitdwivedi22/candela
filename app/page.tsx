@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import type { Session } from "next-auth";
 import { motion } from "framer-motion";
 
 function LogoMark() {
@@ -24,9 +25,9 @@ function LogoMark() {
   );
 }
 
-function TopBar() {
-  const { data: session } = useSession();
-
+// TopBar receives session as a prop — avoids a second useSession() call
+// that would fire a duplicate /api/auth/session network request.
+function TopBar({ session }: { session: Session | null }) {
   return (
     <header className="px-3 pt-3 sm:px-5 sm:pt-5">
       <div className="mx-auto max-w-6xl">
@@ -127,7 +128,7 @@ export default function HomePage() {
           <div className="absolute bottom-[18%] left-[52%] hidden h-40 w-40 -translate-x-1/2 rounded-full border border-white/10 sm:block" />
         </div>
 
-        <TopBar />
+        <TopBar session={session} />
 
         <main className="relative z-10">
           <section className="mx-auto flex min-h-[calc(100vh-73px)] w-full max-w-6xl items-center px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
@@ -200,7 +201,7 @@ export default function HomePage() {
           ))}
         </section>
 
-        <section className="space-y-6">
+        <section className="space-y-8">
           <div className="max-w-3xl">
             <p className="mb-3 text-xs uppercase tracking-[0.32em] text-white/45">Switch domain</p>
             <h2 className="display-font text-3xl leading-tight text-white sm:text-5xl">
@@ -212,65 +213,79 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3 lg:gap-7">
             {domainCards.map((card, index) => (
               <motion.div
                 key={card.title}
                 initial={{ opacity: 0, y: 18 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.25 }}
-                transition={{ duration: 0.45, delay: index * 0.08 }}
-                whileHover={{ y: -8 }}
-                className="group relative overflow-hidden rounded-[2rem]"
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: 0.45, delay: index * 0.09 }}
+                className="group relative flex h-full flex-col overflow-hidden rounded-[2rem]"
+                style={{
+                  transform: "translateZ(0)",
+                }}
               >
                 <Link
                   href={session ? "/dashboard/select-domain" : "/signup"}
-                  className="relative block min-h-[19rem] overflow-hidden rounded-[2rem] border border-white/8 bg-[linear-gradient(180deg,rgba(16,16,16,0.92),rgba(10,10,10,0.94))] p-6 shadow-[0_28px_70px_rgba(0,0,0,0.32)] transition-all duration-500 group-hover:border-[rgba(255,122,61,0.26)] group-hover:shadow-[0_34px_90px_rgba(0,0,0,0.42)]"
+                  className="relative flex h-full min-h-[22rem] flex-col overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[linear-gradient(160deg,rgba(255,255,255,0.06),rgba(10,10,10,0.92)_55%,rgba(255,122,61,0.06)_100%)] p-6 shadow-[0_2px_24px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-md transition-all duration-300 hover:border-[rgba(255,122,61,0.32)] hover:shadow-[0_8px_40px_rgba(255,122,61,0.18),0_2px_12px_rgba(0,0,0,0.4)] hover:-translate-y-1"
                 >
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,122,61,0.14),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(255,184,108,0.08),transparent_26%)] opacity-80" />
-                  <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),transparent_28%,rgba(0,0,0,0.28)_100%)]" />
-                  <div className="absolute inset-x-6 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,184,108,0.45),transparent)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                  <div className="absolute inset-x-0 bottom-0 h-36 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.82))]" />
+                  {/* Ambient gradient overlay */}
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,122,61,0.12),transparent_50%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  {/* Top shimmer line */}
+                  <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,184,108,0.5),transparent)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  {/* Bottom glow edge */}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,122,61,0.24),transparent)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
                   <div className="relative z-10 flex h-full flex-col">
-                    <div className="flex items-start justify-between">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-[1.1rem] border border-[rgba(255,122,61,0.22)] bg-[rgba(255,122,61,0.1)] text-2xl">
+                    {/* Header row */}
+                    <div className="mb-5 flex items-start justify-between gap-3">
+                      <div
+                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.1rem] border border-[rgba(255,122,61,0.22)] bg-[rgba(255,122,61,0.1)] text-2xl transition-all duration-300 group-hover:border-[rgba(255,122,61,0.42)] group-hover:bg-[rgba(255,122,61,0.18)] group-hover:shadow-[0_0_16px_rgba(255,122,61,0.28)]"
+                      >
                         {card.emoji}
                       </div>
-                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-white/48">
+                      <span className="mt-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[0.22em] text-white/45 transition-colors duration-300 group-hover:border-[rgba(255,122,61,0.18)] group-hover:text-[rgba(255,177,98,0.8)]">
                         {card.subtitle}
                       </span>
                     </div>
 
-                    <div className="mt-5">
-                      <h3 className="display-font text-3xl text-white">{card.title}</h3>
-                      <p className="mt-3 max-w-md text-sm leading-6 text-white/62">
+                    {/* Title + description */}
+                    <div className="flex-1">
+                      <h3 className="display-font text-[1.7rem] leading-[1.1] text-white transition-colors duration-300 group-hover:text-white">
+                        {card.title}
+                      </h3>
+                      <p className="mt-3 text-[13.5px] leading-[1.7] text-white/58">
                         {card.description}
                       </p>
                     </div>
 
+                    {/* Tags */}
                     <div className="mt-5 flex flex-wrap gap-2">
                       {card.examples.map((example) => (
                         <span
                           key={example}
-                          className="rounded-full border border-white/8 bg-white/[0.04] px-2.5 py-1 text-xs text-white/58 transition-colors duration-300 group-hover:border-[rgba(255,122,61,0.18)] group-hover:text-white/80"
+                          className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[11px] text-white/52 transition-all duration-300 group-hover:border-[rgba(255,122,61,0.2)] group-hover:bg-[rgba(255,122,61,0.08)] group-hover:text-white/80"
                         >
                           {example}
                         </span>
                       ))}
                     </div>
 
-                    <div className="mt-auto pt-8">
-                      <div className="relative overflow-hidden rounded-[1.4rem] border border-white/8 bg-white/[0.03]">
-                        <div className="px-4 pb-4 pt-3 transition-all duration-500 group-hover:opacity-0 group-hover:translate-y-3">
-                          <p className="text-xs uppercase tracking-[0.26em] text-white/42">Hover to preview</p>
-                          <p className="mt-2 text-sm leading-6 text-white/72">
+                    {/* Use-case preview panel */}
+                    <div className="mt-5 pt-1">
+                      <div className="relative h-[5.5rem] overflow-hidden rounded-[1.2rem] border border-white/[0.07] bg-white/[0.025]">
+                        {/* Default state */}
+                        <div className="absolute inset-0 flex flex-col justify-center px-4 transition-all duration-400 group-hover:opacity-0 group-hover:translate-y-2">
+                          <p className="text-[10px] uppercase tracking-[0.28em] text-white/38">Hover to preview</p>
+                          <p className="mt-1.5 text-[13px] leading-[1.55] text-white/65">
                             See what this domain helps you practice.
                           </p>
                         </div>
-                        <div className="absolute inset-x-0 bottom-0 translate-y-full border-t border-[rgba(255,122,61,0.16)] bg-[linear-gradient(180deg,rgba(255,122,61,0.08),rgba(14,11,10,0.96))] px-4 pb-4 pt-3 opacity-0 transition-all duration-500 ease-out group-hover:translate-y-0 group-hover:opacity-100">
-                          <p className="text-xs uppercase tracking-[0.26em] text-[var(--night-glow)]">Use it for</p>
-                          <p className="mt-2 text-sm leading-6 text-white/82">
+                        {/* Hover reveal state */}
+                        <div className="absolute inset-0 flex translate-y-3 flex-col justify-center border-t border-[rgba(255,122,61,0.14)] bg-[linear-gradient(180deg,rgba(255,122,61,0.07),rgba(10,10,10,0.94))] px-4 opacity-0 transition-all duration-400 ease-out group-hover:translate-y-0 group-hover:opacity-100">
+                          <p className="text-[10px] uppercase tracking-[0.28em] text-[rgba(255,177,98,0.8)]">Use it for</p>
+                          <p className="mt-1.5 text-[13px] leading-[1.55] text-white/80">
                             {card.useCase}
                           </p>
                         </div>

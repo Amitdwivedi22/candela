@@ -103,3 +103,10 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 ```
+
+### Firebase Google Sign-In setup
+
+- Use `http://localhost:3000` for local development. Firebase Google auth often fails on `http://127.0.0.1:3000` with `auth/unauthorized-domain`.
+- In Firebase Console, go to `Authentication -> Settings -> Authorized domains`.
+- Make sure `localhost` is listed for local development.
+- Before deploying, add your production domain there as well, for example `your-app.com`.

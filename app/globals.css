@@ -52,6 +52,14 @@
   }
   html {
     scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+    /* Native view-transition for browsers that support it */
+    @supports (view-transition-name: none) {
+      &::view-transition-old(root),
+      &::view-transition-new(root) {
+        animation-duration: 0.25s;
+      }
+    }
   }
 }
 
@@ -158,5 +166,25 @@ select option {
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* ─── Focus ring: matches orange brand ─────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid rgba(255, 122, 61, 0.55);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ─── Reduced-motion: respect system preference ─────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
