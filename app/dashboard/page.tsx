@@ -5,6 +5,11 @@ import Brief from "@/models/Brief";
 import User from "@/models/User";
 import DashboardClient from "./DashboardClient";
 
+// Force dynamic rendering so Vercel never serves a cached version of this page.
+// Without this, the router cache can redirect back to /select-domain even after
+// the domain PATCH has been saved — because /dashboard is served from a stale snapshot.
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user?.id) {

@@ -88,7 +88,10 @@ export default function SelectDomainPage() {
         engineering: "/dashboard/engineering",
       };
 
-      router.push(routes[selected]);
+      // Use full-page navigation instead of router.push() to avoid Next.js
+      // serving a stale cached /dashboard page on Vercel before the domain
+      // PATCH has been reflected on the server.
+      window.location.href = routes[selected];
     } catch (err) {
       console.error(err);
       setIsSaving(false);
